@@ -1,0 +1,98 @@
+:root {
+  --size: 60vmin;   /* tamaño del face */
+  --face: #000;     /* color de fondo/cara */
+  --eyes: #fff;     /* color de ojos */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--face);
+}
+
+.wrap {
+  width: var(--size);
+  aspect-ratio: 1 / 1;
+  position: relative; /* para posicionar mejillas */
+}
+
+svg { display: block; }
+
+/* ====== PÁRPADOS (animación natural) ====== */
+.lid {
+  fill: var(--face);        /* tapa el ojo con color de cara */
+  pointer-events: none;
+  will-change: transform;
+  animation-play-state: running;
+}
+
+/* Pausar parpadeo cuando body tiene .blink-off */
+body.blink-off .lid {
+  animation-play-state: paused;
+  transform: translateY(-100%); /* deja abiertos por defecto */
+}
+
+/* Superior e inferior */
+.lid.upper {
+  transform: translateY(-100%);
+  animation: blink-upper 4s ease-in-out infinite;
+}
+.lid.lower {
+  transform: translateY(100%);
+  animation: blink-lower 4s ease-in-out infinite;
+}
+
+/* ====== Animaciones de parpadeo ====== */
+@keyframes blink-upper {
+  0%, 88%, 100% { transform: translateY(-100%); }
+  93%, 96%      { transform: translateY(0%); }     /* ojo cerrado */
+}
+@keyframes blink-lower {
+  0%, 88%, 100% { transform: translateY(100%); }
+  93%, 96%      { transform: translateY(20%); }    /* leve cierre inferior */
+}
+
+/* ====== MEJILLAS ====== */
+.cheek {
+  position: absolute;
+  width: calc(var(--size) * 0.35);
+  height: calc(var(--size) * 0.15);
+  border-radius: 500px;
+  top: 60%;                 /* alineado visualmente a tus referencias */
+  filter: blur(8px);
+  opacity: 0;               /* ocultas por defecto */
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+}
+.cheek.left  { left: 8%; }
+.cheek.right { right: 2.5%; }
+
+/* Paletas por estado (se activan en <body>) */
+body.face-1 .cheek {                 /* fiebre (rojas) */
+  background: #ff7a7a;
+  box-shadow: 0 0 30px 10px #ff7a7a55;
+  opacity: 1;
+}
+body.face-2 .cheek {                 /* frío (azules) */
+  background: #6aa8ff;
+  box-shadow: 0 0 30px 10px #6aa8ff55;
+  opacity: 1;
+}
+body.face-3 .cheek {                 /* mareo (verdes) */
+  background: #9bff9b;
+  box-shadow: 0 0 30px 10px #9bff9b55;
+  opacity: 1;
+}
+
+/* (Opcional) respiración suave de las mejillas cuando están visibles */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(0.96); }
+}
+body.face-1 .cheek,
+body.face-2 .cheek,
+body.face-3 .cheek {
+  animation: breathe 2.6s ease-in-out infinite;
+}
