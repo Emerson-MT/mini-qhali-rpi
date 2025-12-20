@@ -37,20 +37,20 @@ pip install -r requirements.txt
 Para facilitar el despliegue, el proyecto incluye un script de automatización que levanta el servidor web, la lectura de sensores y el envío de datos simultáneamente.
 
 1. Dar permisos de ejecución (Solo la primera vez)Debes autorizar al sistema para ejecutar el script de arranque. Abre una terminal en la raíz del proyecto y escribe:
-```
-chmod +x run_miniqhali.sh
-```
+    ```
+    chmod +x run_miniqhali.sh
+    ```
 2. Iniciar el SistemaEjecuta el script maestro:
-```
-./run_miniqhali.sh
-```
+    ```
+    ./run_miniqhali.sh
+    ```
 Lo que sucederá:
 
 Se iniciará el Servidor Flask en segundo plano.
 Arrancará la Lectura de Sensores (generación de datos).
 Se activará el Puente HTTP para enviar los datos a la web.
 
-    Visualización: Una vez corriendo, abre tu navegador en: http://localhost:3000🛑 
+Visualización: Una vez corriendo, abre tu navegador en: http://localhost:3000🛑 
 
 Detener el sistema
 
@@ -68,9 +68,10 @@ Si necesitas integración con sistemas antiguos o dashboards en Node-RED, puedes
     ```
 ## 🧠 Lógica de Expresiones (Estados)El servidor analiza la temperatura y la saturación de oxígeno para cambiar la "emoción" del robot automáticamente.
 
-Estado (Flag),Color Cara,Condición Médica,Descripción
-0,⚫ Normal,Signos estables,Paciente en rango saludable (36.0°C - 37.5°C).
-1,🔴 Rojo,Fiebre,Temperatura corporal > 37.5°C.
-2,🔵 Azul,Hipotermia,Temperatura corporal < 36.0°C.
-3,🟢 Verde,Hipoxia / Mareo,Saturación de oxígeno (SpO2) < 90%.
+| Estado (Flag) | Color Cara | Condición Médica | Descripción |
+| :---: | :--- | :--- | :--- |
+| **0** | ⚫ **Normal** | Signos estables | Paciente en rango saludable (35.0°C - 37.5°C). |
+| **1** | 🔴 **Rojo** | Fiebre | Temperatura corporal **> 37.5°C**. |
+| **2** | 🔵 **Azul** | Hipotermia | Temperatura corporal **< 35.0°C**. |
+| **3** | 🟢 **Verde** | Hipoxia / Mareo | Saturación de oxígeno (SpO2) **< 90%**. |
 
