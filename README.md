@@ -44,15 +44,15 @@ Para facilitar el despliegue, el proyecto incluye un script de automatización q
     ```
     ./run_miniqhali.sh
     ```
-Lo que sucederá:
+### Lo que sucederá:
 
 Se iniciará el Servidor Flask en segundo plano.
 Arrancará la Lectura de Sensores (generación de datos).
 Se activará el Puente HTTP para enviar los datos a la web.
 
-Visualización: Una vez corriendo, abre tu navegador en: http://localhost:3000🛑 
+Visualización: Una vez corriendo, abre tu navegador en: http://localhost:3000
 
-Detener el sistema
+### 🛑 Detener el sistema
 
 Para apagar todos los procesos de forma segura, simplemente presiona Ctrl + C en la terminal donde corre el script.
 
@@ -66,7 +66,9 @@ Si necesitas integración con sistemas antiguos o dashboards en Node-RED, puedes
     cd src/health_system/legacy
     python iot_publisher.py
     ```
-## 🧠 Lógica de Expresiones (Estados)El servidor analiza la temperatura y la saturación de oxígeno para cambiar la "emoción" del robot automáticamente.
+## 🧠 Lógica de Expresiones (Estados)
+
+El servidor analiza la temperatura y la saturación de oxígeno para cambiar la "emoción" del robot automáticamente.
 
 | Estado (Flag) | Color Cara | Condición Médica | Descripción |
 | :---: | :--- | :--- | :--- |
