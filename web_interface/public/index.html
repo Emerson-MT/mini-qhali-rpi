@@ -7,6 +7,17 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="hud-layer">
+    <div class="stat top-left">
+      TEMP: <span id="show-temp">--</span>°C
+    </div>
+    <div class="stat top-right">
+      SpO2: <span id="show-spo2">--</span>%
+    </div>
+    <div class="stat bottom-left">
+      BPM: <span id="show-hr">--</span>
+    </div>
+  </div>
   <div class="wrap">
     <svg viewBox="0 0 200 200" width="100%" height="100%" aria-label="cara">
       <!-- Cara -->
@@ -48,6 +59,9 @@
     });
     socket.on('faceFlag', (value) => {
       if (typeof setFace === 'function') setFace(value);
+    });
+    socket.on('sensorData', (data) => {
+      if (typeof updateSensors === 'function') updateSensors(data);
     });
 
     // Estado inicial desde el servidor

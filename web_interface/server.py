@@ -54,6 +54,54 @@ def face():
         socketio.emit("faceFlag", faceFlag)
     return jsonify({"faceFlag": faceFlag})
 
+# --- NUEVA RUTA: Recibir Datos del Sensor ---
+@app.route("/api/telemetria", methods=["POST"])
+def recibir_telemetria():
+    global faceFlag
+    
+    # 1. Recibir el JSON completo (la lista de objetos)
+    datos_lista = request.get_json(silent=True) or []
+    
+    # Validamos que sea una lista y tenga datos
+    if not isinstance(datos_lista, list) or len(datos_lista) == 0:
+        return jsonify({"error": "Formato incorrecto, se espera una lista"}), 400
+
+    # 2. Tomamos solo el ÚLTIMO dato (el más reciente)
+    ultimo_dato = datos_lista[-1]
+    
+    # Extraemos los valores usando las llaves de TU json
+    temp_obj = ultimo_dato.get("tempObject", 0.0)
+    spo2 = ultimo_dato.get("spo2", 0)
+    bpm = ultimo_dato.get("heartRate", 0)
+    finger = ultimo_dato.get("finger_detected", False)
+
+    print(f"📩 Dato recibido: Temp={temp_obj}, SpO2={spo2}, Dedo={finger}")
+
+    # 3. Lógica de Colores (Temperatura)
+    # Rango normal humano: 36.0 a 37.5 aprox.
+    nuevo_estado = 0 # Normal
+    
+    if finger: # Solo cambiamos la cara si hay un dedo detectado
+        if temp_obj > 37.5:
+            nuevo_estado = 1 # Fiebre -> ROJO
+        elif temp_obj < 35.0:
+            nuevo_estado = 2 # Hipotermia -> AZUL
+        elif spo2 < 90 and spo2 > 0:
+            nuevo_estado = 3 # Falta aire -> VERDE 
+        else:
+            nuevo_estado = 0
+    
+    # Actualizamos la cara si cambió
+    if faceFlag != nuevo_estado:
+        faceFlag = nuevo_estado
+        socketio.emit("faceFlag", faceFlag)
+
+    # 4. ENVIAMOS LOS NÚMEROS A LA PANTALLA
+    # Esto activará el javascript que escribimos en el paso 2
+    socketio.emit("sensorData", ultimo_dato)
+
+    return jsonify({"status": "ok", "face": faceFlag})
+
 # --- Eventos Socket.IO ---
 @socketio.on("connect")
 def handle_connect():
@@ -70,4 +118,4 @@ if __name__ == "__main__":
     print(f"📁 STATIC_DIR = {STATIC_DIR}")
     print("👉 Blink: GET /blink/0 (natural) | /blink/1 (pausar) | GET/POST /blink")
     print("👉 Face:  GET /face/0 (normal) | /face/1 (rojo) | /face/2 (azul) | /face/3 (verde) | GET/POST /face")
-    socketio.run(app, host="0.0.0.0", port=3000)
+    socketio.run(app, host="0.0.0.0", port=3000, allow_unsafe_werkzeug=True)

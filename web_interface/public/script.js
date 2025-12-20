@@ -32,3 +32,26 @@
     console.log("[CLIENT] setFace ->", f);
   };
 })();
+
+// --- Control de Sensores (HUD) ---
+(function () {
+  const elTemp = document.getElementById("show-temp");
+  const elSpo2 = document.getElementById("show-spo2");
+  const elHr   = document.getElementById("show-hr");
+
+  // Escuchamos el evento que crearemos en el servidor
+  // Asumimos que socket ya está definido globalmente o accedemos a él
+  // Nota: Si socket está en el HTML, mejor mueve esta lógica al bloque script del HTML
+  // O expón una función global:
+  
+  window.updateSensors = function(data) {
+    if(!data) return;
+    
+    // Actualizamos el texto
+    if(elTemp) elTemp.innerText = parseFloat(data.tempObject).toFixed(1);
+    if(elSpo2) elSpo2.innerText = Math.round(data.spo2);
+    if(elHr)   elHr.innerText   = Math.round(data.heartRate);
+    
+    console.log("[CLIENT] Sensores actualizados:", data);
+  };
+})();
