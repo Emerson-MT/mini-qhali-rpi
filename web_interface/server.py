@@ -9,9 +9,15 @@ STATIC_DIR = BASE_DIR / "public"
 app = Flask(__name__, static_folder=str(STATIC_DIR), static_url_path="")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
-# --- ESTADOS ---
-blinkFlag = 0  # 0 = ON natural ; 1 = OFF pausado
-faceFlag = 0   # 0 = normal ; 1=rojo ; 2=azul ; 3=verde
+# --- ESTADOS (MEMORIA DEL ROBOT) ---
+blinkFlag = 0
+faceFlag = 0
+# NUEVO: Guardamos el último dato de sensores recibido
+last_sensor_data = {
+    "tempObject": 0,
+    "spo2": 0,
+    "heartRate": 0
+}
 
 # --- Ruta principal ---
 @app.route("/")
@@ -57,7 +63,7 @@ def face():
 # --- NUEVA RUTA: Recibir Datos del Sensor ---
 @app.route("/api/telemetria", methods=["POST"])
 def recibir_telemetria():
-    global faceFlag
+    global faceFlag, last_sensor_data # Usamos la variable global
     
     # 1. Recibir el JSON completo (la lista de objetos)
     datos_lista = request.get_json(silent=True) or []
@@ -68,6 +74,9 @@ def recibir_telemetria():
 
     # 2. Tomamos solo el ÚLTIMO dato (el más reciente)
     ultimo_dato = datos_lista[-1]
+
+    # ACTUALIZAMOS LA MEMORIA DEL SERVIDOR
+    last_sensor_data = ultimo_dato
     
     # Extraemos los valores usando las llaves de TU json
     temp_obj = ultimo_dato.get("tempObject", 0.0)
@@ -98,7 +107,7 @@ def recibir_telemetria():
 
     # 4. ENVIAMOS LOS NÚMEROS A LA PANTALLA
     # Esto activará el javascript que escribimos en el paso 2
-    socketio.emit("sensorData", ultimo_dato)
+    socketio.emit("sensorData", last_sensor_data)
 
     return jsonify({"status": "ok", "face": faceFlag})
 
@@ -108,6 +117,9 @@ def handle_connect():
     print("✅ Cliente conectado")
     socketio.emit("blinkFlag", blinkFlag)
     socketio.emit("faceFlag", faceFlag)
+    if last_sensor_data:
+        print(f"   -> Enviando memoria al nuevo cliente: {last_sensor_data}")
+        socketio.emit("sensorData", last_sensor_data)
 
 @socketio.on("disconnect")
 def handle_disconnect():
