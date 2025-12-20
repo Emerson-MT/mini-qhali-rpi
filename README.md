@@ -26,11 +26,15 @@ El proyecto está organizado de manera modular:
 └── README.md
 ```
 
-## ⚙️ Instalación y RequisitosAsegúrate de tener Python 3 instalado en tu sistema. Antes de iniciar, instala las librerías necesarias ejecutando:
+## ⚙️ Instalación y Requisitos
+
+Asegúrate de tener Python 3 instalado en tu sistema. Antes de iniciar, instala las librerías necesarias ejecutando:
 ```
 install flask flask-socketio requests paho-mqtt
 ```
-## 🚀 Guía de Ejecución RápidaPara facilitar el despliegue, el proyecto incluye un script de automatización que levanta el servidor web, la lectura de sensores y el envío de datos simultáneamente.
+## 🚀 Guía de Ejecución Rápida
+
+Para facilitar el despliegue, el proyecto incluye un script de automatización que levanta el servidor web, la lectura de sensores y el envío de datos simultáneamente.
 
 1. Dar permisos de ejecución (Solo la primera vez)Debes autorizar al sistema para ejecutar el script de arranque. Abre una terminal en la raíz del proyecto y escribe:
 ```
@@ -52,7 +56,9 @@ Detener el sistema
 
 Para apagar todos los procesos de forma segura, simplemente presiona Ctrl + C en la terminal donde corre el script.
 
-## 📡 Módulos Opcionales (Legacy)Envío por MQTT (Node-RED / Mosquitto)
+## 📡 Módulos Opcionales (Legacy)
+
+### Envío por MQTT (Node-RED / Mosquitto)
 
 Si necesitas integración con sistemas antiguos o dashboards en Node-RED, puedes usar el publicador MQTT que se encuentra en la carpeta legacy.
     Requisito: Tener un broker MQTT (como Mosquitto) corriendo en localhost.
