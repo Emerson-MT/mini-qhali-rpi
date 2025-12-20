@@ -12,7 +12,6 @@ El proyecto está organizado de manera modular:
 ├── /web_interface           # SERVIDOR FLASK (Frontend y Backend Web)
 │   ├── /public              # Archivos estáticos (HTML, CSS, JS)
 │   ├── server.py            # Cerebro principal: Recibe datos y controla la cara
-│   └── requirements.txt     # Dependencias de Python
 │
 ├── /src                     # LÓGICA DE SENSORES (Hardware)
 │   └── /health_system
@@ -22,15 +21,16 @@ El proyecto está organizado de manera modular:
 │       └── /legacy
 │           └── iot_publisher.py    # (Opcional) Envío vía MQTT/Mosquitto
 │
-├── run_miniqhali.sh         # Script de arranque automático (Bash)
-└── README.md
+│── README.md
+├── requirements.txt
+└── run_miniqhali.sh         # Script de arranque automático (Bash)
 ```
 
 ## ⚙️ Instalación y Requisitos
 
 Asegúrate de tener Python 3 instalado en tu sistema. Antes de iniciar, instala las librerías necesarias ejecutando:
 ```
-install flask flask-socketio requests paho-mqtt
+pip install -r requirements.txt
 ```
 ## 🚀 Guía de Ejecución Rápida
 
