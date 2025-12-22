@@ -1,0 +1,63 @@
+body { 
+    font-family: sans-serif; 
+    background: #f0f4f8; 
+    padding: 20px; 
+    text-align: center; 
+}
+.card { 
+    background: white; 
+    padding: 20px; 
+    border-radius: 15px; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    margin-bottom: 20px; 
+}
+.step { 
+    display: none; 
+} 
+.active { 
+    display: block; 
+}
+input { 
+    width: 80%; 
+    padding: 10px; 
+    margin: 10px 0; 
+    border: 1px solid #ccc; 
+    border-radius: 5px; 
+}
+
+button { 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    padding: 12px 24px; 
+    border-radius: 25px; 
+    font-size: 16px; 
+    cursor: pointer; 
+    width: 100%; 
+    margin-top: 10px;
+}
+
+button:disabled {
+    background: #ccc; 
+}
+
+.value-display { 
+    font-size: 3rem; 
+    font-weight: bold; 
+    color: #333; 
+    margin: 20px 0; 
+}
+
+.unit { 
+    font-size: 1rem; 
+    color: #666; 
+}
+
+h2 { 
+    color: #2c3e50; 
+}
+
+.instruction { 
+    color: #e67e22; 
+    font-weight: bold; 
+}

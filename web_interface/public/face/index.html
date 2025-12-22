@@ -4,9 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Robot Face Parpadeo</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="face/style.css">
+  <!-- Socket.IO v3 (compatible con Flask-SocketIO) -->
+  <script src="https://cdn.socket.io/3.1.3/socket.io.min.js"></script>
+  <script src="face/script.js" defer></script>
 </head>
 <body>
+  <!-- 
   <div id="hud-layer">
     <div class="stat top-left">
       TEMP: <span id="show-temp">--</span>°C
@@ -18,6 +22,7 @@
       BPM: <span id="show-hr">--</span>
     </div>
   </div>
+  -->
   <div class="wrap">
     <svg viewBox="0 0 200 200" width="100%" height="100%" aria-label="cara">
       <!-- Cara -->
@@ -42,36 +47,5 @@
     <div class="cheek left"></div>
     <div class="cheek right"></div>
   </div>
-
-  <!-- Socket.IO v3 (compatible con Flask-SocketIO) -->
-  <script src="https://cdn.socket.io/3.1.3/socket.io.min.js"></script>
-
-  <!-- Lógica cliente -->
-  <script src="script.js"></script>
-
-  <!-- Suscripción a flags y sincronización inicial -->
-  <script>
-    const socket = io();
-    socket.on("connect", () => console.log("[CLIENT] socket conectado:", socket.id));
-
-    socket.on('blinkFlag', (value) => {
-      if (typeof setBlink === 'function') setBlink(value);
-    });
-    socket.on('faceFlag', (value) => {
-      if (typeof setFace === 'function') setFace(value);
-    });
-    socket.on('sensorData', (data) => {
-      if (typeof updateSensors === 'function') updateSensors(data);
-    });
-
-    // Estado inicial desde el servidor
-    Promise.all([
-      fetch('/blink').then(r => r.json()),
-      fetch('/face').then(r => r.json())
-    ]).then(([{ blinkFlag }, { faceFlag }]) => {
-      if (typeof setBlink === 'function') setBlink(blinkFlag);
-      if (typeof setFace === 'function') setFace(faceFlag);
-    }).catch(console.error);
-  </script>
 </body>
 </html>

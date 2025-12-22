@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniQhali Móvil</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <link rel="stylesheet" href="mobile/style.css"> 
+    <script src="mobile/script.js" defer></script>
+</head>
+<body>
+    <div id="step-1" class="step active card">
+        <h2>🧑‍⚕️ Nuevo Paciente</h2>
+        <p>Ingrese los datos para comenzar.</p>
+        <input type="text" id="p-name" placeholder="Nombre completo">
+        <input type="number" id="p-age" placeholder="Edad">
+        <button onclick="nextStep(2)">Comenzar Chequeo</button>
+    </div>
+
+    <div id="step-2" class="step card">
+        <h2>❤️ Ritmo Cardíaco</h2>
+        <p class="instruction">Coloque el dedo en el sensor.</p>
+        <div class="value-display"><span id="val-bpm">--</span> <span class="unit">BPM</span></div>
+        <p>Mantenga la calma...</p>
+        <button onclick="guardarDato('bpm', 3)">Siguiente (SpO2)</button>
+    </div>
+
+    <div id="step-3" class="step card">
+        <h2>imn Saturación (SpO2)</h2>
+        <p class="instruction">Mantenga el dedo quieto.</p>
+        <div class="value-display"><span id="val-spo2">--</span> <span class="unit">%</span></div>
+        <button onclick="guardarDato('spo2', 4)">Siguiente (Temp)</button>
+    </div>
+
+    <div id="step-4" class="step card">
+        <h2>🌡️ Temperatura</h2>
+        <p class="instruction">Apunte el sensor a la frente.</p>
+        <div class="value-display"><span id="val-temp">--</span> <span class="unit">°C</span></div>
+        <button onclick="finalizar()">Finalizar</button>
+    </div>
+
+    <div id="step-5" class="step card">
+        <h2>✅ Chequeo Completo</h2>
+        <div id="resumen"></div>
+        <button onclick="location.reload()">Nuevo Paciente</button>
+    </div>
+</body>
+</html>

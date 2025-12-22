@@ -22,7 +22,17 @@ last_sensor_data = {
 # --- Ruta principal ---
 @app.route("/")
 def index():
-    return send_from_directory(STATIC_DIR, "index.html")
+    return send_from_directory(STATIC_DIR, "face/index.html")
+
+@app.route("/mobile")
+def mobile_interface():
+    # Esta ruta servirá el archivo HTML específico para el celular
+    return send_from_directory(STATIC_DIR, "mobile/index.html")
+
+# Si agregas una tercera página en el futuro:
+@app.route("/monitoring")
+def monitoring_interface():
+    return send_from_directory(STATIC_DIR, "monitoring/index.html")
 
 # --- Rutas Blink ---
 @app.route("/blink/<int:flag>")
