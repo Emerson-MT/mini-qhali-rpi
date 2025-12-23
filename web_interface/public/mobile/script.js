@@ -1,113 +1,217 @@
-// mobile.js - Lógica de la interfaz de celular
+// mobile.js
 
-// ==========================================
-// 1. ESTADO GLOBAL (Memoria)
-// ==========================================
 const socket = io();
 
-// Objeto para guardar el reporte final
-let paciente = {
-    nombre: "",
-    edad: "",
-    bpm: 0,
-    spo2: 0,
-    temp: 0
-};
+// --- CONFIGURACIÓN ---
+const TIEMPO_MEDICION = 15; // Segundos que dura cada etapa
 
-// Variables temporales para la visualización en tiempo real
-let currentBPM = 0;
-let currentSpO2 = 0;
-let currentTemp = 0.0;
+// --- ESTADO GLOBAL ---
+let paciente = { nombre: "", edad: "" };
 
+// Almacenes de datos (Aquí guardaremos todo lo que llegue en los 15s)
+let historyBPM = [];
+let historySpO2 = [];
+let historyTemp = [];
 
-// ==========================================
-// 2. FUNCIONES DE INTERFAZ (Navegación)
-// ==========================================
+// Promedios finales
+let avgBPM = 0, avgSpO2 = 0, avgTemp = 0;
 
-// Función global para cambiar de paso
-function nextStep(stepNumber) {
-    
-    // VALIDACIÓN: Si estamos saliendo del paso 1, verificamos datos
-    if(stepNumber === 2) {
-        const nombreInput = document.getElementById('p-name').value;
-        const edadInput = document.getElementById('p-age').value;
+// Variables de control de medición
+let currentStep = 1;
+let isMeasuring = false;
+let timeLeft = TIEMPO_MEDICION;
+let timerInterval = null;
 
-        if(nombreInput.trim() === "") {
-            alert("Por favor, ingrese el nombre del paciente.");
-            return; // Detiene la función, no avanza
-        }
-        
-        // Guardamos en memoria
-        paciente.nombre = nombreInput;
-        paciente.edad = edadInput;
+// --- FUNCIONES DE NAVEGACIÓN ---
+
+function nextStep(targetStep) {
+    // 1. Validación del Paso 1
+    if(currentStep === 1 && targetStep === 2) {
+        const nombre = document.getElementById('p-name').value;
+        const edad = document.getElementById('p-age').value;
+        if(nombre.trim() === "") return alert("Ingrese nombre");
+        paciente.nombre = nombre;
+        paciente.edad = edad;
     }
 
-    // Ocultar todos los pasos
+    // 2. Transición visual
     document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-    // Mostrar el deseado
-    document.getElementById(`step-${stepNumber}`).classList.add('active');
+    document.getElementById(`step-${targetStep}`).classList.add('active');
+    
+    currentStep = targetStep;
+
+    // 3. Preparar la nueva medición según el paso
+    resetMeasurement(); // Reiniciamos temporizadores y banderas
+
+    if(targetStep === 2) console.log("Listo para medir BPM...");
+    if(targetStep === 3) console.log("Listo para medir SpO2...");
+    if(targetStep === 4) console.log("Listo para medir Temp...");
 }
 
-// Función para congelar el dato actual y avanzar
-function guardarDato(tipo, nextStepNum) {
-    if(tipo === 'bpm') {
-        paciente.bpm = currentBPM;
-        console.log(`[MOBILE] BPM guardado: ${currentBPM}`);
-    }
-    if(tipo === 'spo2') {
-        paciente.spo2 = currentSpO2;
-        console.log(`[MOBILE] SpO2 guardado: ${currentSpO2}`);
-    }
-    
-    nextStep(nextStepNum);
+function resetMeasurement() {
+    isMeasuring = false;
+    timeLeft = TIEMPO_MEDICION;
+    clearInterval(timerInterval);
+    // Actualizamos textos de UI
+    if(document.getElementById('timer-bpm')) document.getElementById('timer-bpm').innerText = "Esperando sensor...";
+    if(document.getElementById('timer-spo2')) document.getElementById('timer-spo2').innerText = "Esperando sensor...";
+    if(document.getElementById('timer-temp')) document.getElementById('timer-temp').innerText = "Esperando sensor...";
 }
 
-// Función final para generar el resumen
-function finalizar() {
-    paciente.temp = currentTemp;
-    console.log(`[MOBILE] Temp guardada: ${currentTemp}`);
-    
-    // Generar HTML del resumen
-    const resumenHTML = `
-        <div style="text-align: left; margin-top: 10px;">
-            <p><strong>👤 Paciente:</strong> ${paciente.nombre} (${paciente.edad} años)</p>
-            <hr>
-            <p>❤️ <strong>Ritmo Cardíaco:</strong> ${paciente.bpm} BPM</p>
-            <p>💧 <strong>Saturación:</strong> ${paciente.spo2} %</p>
-            <p>🌡️ <strong>Temperatura:</strong> ${paciente.temp} °C</p>
-        </div>
-    `;
-    
-    const elResumen = document.getElementById('resumen');
-    if(elResumen) elResumen.innerHTML = resumenHTML;
-    
-    // (Opcional) Aquí podrías enviar 'paciente' al servidor para guardarlo en un Excel/BD
-    // socket.emit('guardarReporte', paciente);
+// --- LÓGICA DEL TEMPORIZADOR ---
 
-    nextStep(5);
+function startTimer(type) {
+    if(isMeasuring) return; // Si ya está corriendo, no hacer nada
+    isMeasuring = true;
+
+    console.log(`[TIMER] Iniciando cuenta regresiva para ${type}`);
+    
+    const timerElement = document.getElementById(`timer-${type}`);
+    const btnElement = document.getElementById(`btn-${type}`);
+
+    // Intervalo de 1 segundo
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        timerElement.innerText = `Midiendo: ${timeLeft}s restantes`;
+
+        if(timeLeft <= 0) {
+            stopTimer(type, btnElement, timerElement);
+        }
+    }, 1000);
 }
 
+function stopTimer(type, btnElement, timerElement) {
+    clearInterval(timerInterval);
+    isMeasuring = false; // Dejamos de aceptar datos nuevos para el historial
+    
+    timerElement.innerText = "✅ Medición completada";
+    timerElement.style.color = "green";
+    
+    // Habilitar botón de siguiente
+    btnElement.innerText = "Siguiente >";
+    btnElement.disabled = false;
 
-// ==========================================
-// 3. EVENTOS DE SOCKET (Datos en vivo)
-// ==========================================
+    // Calcular promedio inmediato para logs (opcional)
+    console.log(`[TIMER] Fin de ${type}. Datos recolectados.`);
+}
 
-socket.on("connect", () => console.log("[MOBILE] Conectado al servidor"));
+// --- RECEPCIÓN DE DATOS (SOCKET) ---
 
 socket.on('sensorData', (data) => {
-    // Protección: Si data es null o faltan campos, usa 0
-    // Esto evita que salga "NaN" en la pantalla
-    currentBPM = Math.round(data.heartRate || 0);
-    currentSpO2 = Math.round(data.spo2 || 0);
-    currentTemp = parseFloat(data.tempObject || 0).toFixed(1);
+    // Valores crudos
+    const rawBPM = Math.round(data.heartRate || 0);
+    const rawSpO2 = Math.round(data.spo2 || 0);
+    const rawTemp = parseFloat(data.tempObject || 0).toFixed(1);
 
-    // Actualizamos el DOM solo si el elemento existe en pantalla
+    // 1. Mostrar siempre el valor en vivo (feedback visual)
     const elBpm = document.getElementById('val-bpm');
     const elSpo2 = document.getElementById('val-spo2');
     const elTemp = document.getElementById('val-temp');
+    
+    if(elBpm) elBpm.innerText = rawBPM;
+    if(elSpo2) elSpo2.innerText = rawSpO2;
+    if(elTemp) elTemp.innerText = rawTemp;
 
-    // Usamos innerText para ser más rápidos
-    if(elBpm) elBpm.innerText = currentBPM;
-    if(elSpo2) elSpo2.innerText = currentSpO2;
-    if(elTemp) elTemp.innerText = currentTemp;
+    // 2. LÓGICA DE CAPTURA SEGÚN EL PASO ACTUAL
+    
+    // --- PASO 2: BPM ---
+    if(currentStep === 2) {
+        // Solo empezamos si detectamos un valor válido (> 40 para evitar ruido)
+        if(!isMeasuring && rawBPM > 40 && timeLeft === TIEMPO_MEDICION) {
+            startTimer('bpm');
+        }
+        
+        // Si el tiempo está corriendo, guardamos el dato
+        if(isMeasuring && rawBPM > 40) {
+            historyBPM.push(rawBPM);
+        }
+    }
+
+    // --- PASO 3: SpO2 ---
+    if(currentStep === 3) {
+        if(!isMeasuring && rawSpO2 > 80 && timeLeft === TIEMPO_MEDICION) {
+            startTimer('spo2');
+        }
+        if(isMeasuring && rawSpO2 > 50) {
+            historySpO2.push(rawSpO2);
+        }
+    }
+
+    // --- PASO 4: Temperatura ---
+    if(currentStep === 4) {
+        if(!isMeasuring && rawTemp > 30 && timeLeft === TIEMPO_MEDICION) {
+            startTimer('temp');
+        }
+        if(isMeasuring && rawTemp > 30) {
+            historyTemp.push(parseFloat(rawTemp));
+        }
+    }
 });
+
+// --- FINALIZACIÓN Y GRÁFICAS ---
+
+function calcularPromedio(arr) {
+    if(arr.length === 0) return 0;
+    const sum = arr.reduce((a, b) => a + b, 0);
+    return (sum / arr.length).toFixed(1);
+}
+
+function finalizar() {
+    // 1. Calcular promedios finales
+    avgBPM = Math.round(calcularPromedio(historyBPM));
+    avgSpO2 = Math.round(calcularPromedio(historySpO2));
+    avgTemp = calcularPromedio(historyTemp);
+
+    // 2. Mostrar Resumen Texto
+    const resumenHTML = `
+        <p><strong>👤 Paciente:</strong> ${paciente.nombre} (${paciente.edad} años)</p>
+        <hr>
+        <p>❤️ <strong>Promedio BPM:</strong> ${avgBPM}</p>
+        <p>💧 <strong>Promedio SpO2:</strong> ${avgSpO2}%</p>
+        <p>🌡️ <strong>Promedio Temp:</strong> ${avgTemp}°C</p>
+    `;
+    document.getElementById('resumen-texto').innerHTML = resumenHTML;
+
+    // 3. Ir al paso 5
+    nextStep(5);
+
+    // 4. DIBUJAR LAS GRÁFICAS (Chart.js)
+    // Pequeño delay para asegurar que el canvas sea visible
+    setTimeout(() => {
+        dibujarGrafico('chartBPM', 'BPM', historyBPM, 'red');
+        dibujarGrafico('chartSpO2', 'SpO2 %', historySpO2, 'blue');
+        dibujarGrafico('chartTemp', 'Temp °C', historyTemp, 'orange');
+    }, 100);
+}
+
+function dibujarGrafico(canvasId, label, dataArray, color) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    // Generamos etiquetas simples (1, 2, 3...) para el eje X
+    const labels = dataArray.map((_, index) => index + 1);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: dataArray,
+                borderColor: color,
+                backgroundColor: color,
+                borderWidth: 2,
+                pointRadius: 1,
+                tension: 0.4 // Suaviza la curva
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }, // Ocultar leyenda para ahorrar espacio
+            scales: {
+                x: { display: false }, // Ocultar eje X
+                y: { beginAtZero: false } // Auto-escala eje Y
+            }
+        }
+    });
+}

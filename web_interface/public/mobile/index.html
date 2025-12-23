@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MiniQhali Móvil</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link rel="stylesheet" href="mobile/style.css"> 
     <script src="mobile/script.js" defer></script>
 </head>
 <body>
+
     <div id="step-1" class="step active card">
         <h2>🧑‍⚕️ Nuevo Paciente</h2>
         <p>Ingrese los datos para comenzar.</p>
@@ -19,29 +23,44 @@
 
     <div id="step-2" class="step card">
         <h2>❤️ Ritmo Cardíaco</h2>
-        <p class="instruction">Coloque el dedo en el sensor.</p>
+        <p class="instruction">Coloque el dedo y espere.</p>
+        
         <div class="value-display"><span id="val-bpm">--</span> <span class="unit">BPM</span></div>
-        <p>Mantenga la calma...</p>
-        <button onclick="guardarDato('bpm', 3)">Siguiente (SpO2)</button>
+        
+        <div id="timer-bpm" class="timer-box">Esperando sensor...</div>
+        
+        <button id="btn-bpm" onclick="nextStep(3)" disabled>Midiendo...</button>
     </div>
 
     <div id="step-3" class="step card">
-        <h2>imn Saturación (SpO2)</h2>
+        <h2>💧 Saturación (SpO2)</h2>
         <p class="instruction">Mantenga el dedo quieto.</p>
         <div class="value-display"><span id="val-spo2">--</span> <span class="unit">%</span></div>
-        <button onclick="guardarDato('spo2', 4)">Siguiente (Temp)</button>
+        <div id="timer-spo2" class="timer-box">Esperando sensor...</div>
+        <button id="btn-spo2" onclick="nextStep(4)" disabled>Midiendo...</button>
     </div>
 
     <div id="step-4" class="step card">
         <h2>🌡️ Temperatura</h2>
-        <p class="instruction">Apunte el sensor a la frente.</p>
+        <p class="instruction">Apunte a la frente.</p>
         <div class="value-display"><span id="val-temp">--</span> <span class="unit">°C</span></div>
-        <button onclick="finalizar()">Finalizar</button>
+        <div id="timer-temp" class="timer-box">Esperando sensor...</div>
+        <button id="btn-temp" onclick="finalizar()" disabled>Midiendo...</button>
     </div>
 
     <div id="step-5" class="step card">
         <h2>✅ Chequeo Completo</h2>
-        <div id="resumen"></div>
+        <div id="resumen-texto" style="text-align: left; margin-bottom: 20px;"></div>
+        
+        <h3>Historial Ritmo (BPM)</h3>
+        <div class="chart-container"><canvas id="chartBPM"></canvas></div>
+        
+        <h3>Historial Oxígeno (%)</h3>
+        <div class="chart-container"><canvas id="chartSpO2"></canvas></div>
+        
+        <h3>Historial Temp (°C)</h3>
+        <div class="chart-container"><canvas id="chartTemp"></canvas></div>
+
         <button onclick="location.reload()">Nuevo Paciente</button>
     </div>
 </body>

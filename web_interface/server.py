@@ -89,10 +89,10 @@ def recibir_telemetria():
     last_sensor_data = ultimo_dato
     
     # Extraemos los valores usando las llaves de TU json
-    temp_obj = ultimo_dato.get("tempObject", 0.0)
-    spo2 = ultimo_dato.get("spo2", 0)
-    bpm = ultimo_dato.get("heartRate", 0)
-    finger = ultimo_dato.get("finger_detected", False)
+    temp_obj = ultimo_dato.get("tempObject", 0.0) or 0.0
+    spo2 = ultimo_dato.get("spo2", 0) or 0
+    bpm = ultimo_dato.get("heartRate", 0) or 0
+    finger = ultimo_dato.get("finger_detected", False) or False
 
     print(f"📩 Dato recibido: Temp={temp_obj}, SpO2={spo2}, Dedo={finger}")
 
