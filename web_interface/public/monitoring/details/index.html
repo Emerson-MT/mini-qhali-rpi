@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha del Paciente - QhaliCare</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="/monitoring/style.css">
+    
+    <link rel="stylesheet" href="/monitoring/details/style.css">
+    
+    <script src="/monitoring/details/script.js" defer></script>
+</head>
+<body>
+
+    <header class="top-bar">
+        <div class="logo-container">
+            <h1 onclick="window.location.href='/monitoring'" style="cursor:pointer;">QhaliCare</h1>
+        </div>
+        <div class="robot-info">
+            <span class="label">Unidad Robot:</span>
+            <span class="value">12Lim</span>
+        </div>
+        <div class="time-display" id="clock">--:--:--</div>
+    </header>
+
+    <main class="container detail-container">
+        <a href="/monitoring" class="back-link"><i class="fa-solid fa-arrow-left"></i> Volver a la lista</a>
+
+        <div class="patient-header-card">
+            <div class="ph-item name-item">
+                <span class="ph-label">A. y N.:</span>
+                <span class="ph-value" id="d-name">Cargando...</span>
+            </div>
+            <div class="ph-item">
+                <span class="ph-label">Edad:</span>
+                <span class="ph-value box-value" id="d-age">--</span>
+            </div>
+            <div class="ph-item">
+                <span class="ph-label">Sexo:</span>
+                <span class="ph-value box-value" id="d-sex">--</span>
+            </div>
+            <div class="ph-item">
+                <span class="ph-label">Hora:</span>
+                <span class="ph-value box-value" id="d-time">--:--</span>
+            </div>
+        </div>
+
+        <div class="detail-grid">
+            
+            <div class="left-column">
+                <div class="chart-box">
+                    <h3>Frecuencia cardiaca:</h3>
+                    <div class="medical-chart">
+                        <canvas id="chartBPM"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h3>Frecuencia respiratoria:</h3>
+                    <div class="medical-chart">
+                        <canvas id="chartSpO2"></canvas>
+                    </div>
+                </div>
+
+                <div class="values-row">
+                    <div class="val-pill">
+                        <span>Temperatura:</span>
+                        <div class="pill-box" id="d-val-temp">--°C</div>
+                    </div>
+                    <div class="val-pill">
+                        <span>SPO2:</span>
+                        <div class="pill-box" id="d-val-spo2">--%</div>
+                    </div>
+                    <div class="val-pill">
+                        <span>FC:</span>
+                        <div class="pill-box" id="d-val-bpm">-- bpm</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="middle-column">
+                <div class="ranges-info">
+                    <h4>Rangos normales:</h4>
+                    <div class="range-tag yellow">60 - 100 bpm</div>
+                    <div class="range-tag green">92% - 99%</div>
+                    <div class="range-tag red">36.1°C - 38.1°C</div>
+                </div>
+            </div>
+
+            <div class="right-column">
+                <div class="robot-detail-scene">
+                    <div class="speech-bubble-small">
+                        <p>Estos son los datos.</p>
+                    </div>
+                    <img src="/mobile/assets/robot_intro.png" alt="Robot">
+                </div>
+            </div>
+
+            <div class="notes-box">
+                <strong>NOTAS:</strong>
+                <ul id="d-notes">
+                    <li>Analizando datos...</li>
+                </ul>
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>

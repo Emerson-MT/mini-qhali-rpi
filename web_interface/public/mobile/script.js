@@ -1,154 +1,221 @@
-// mobile.js
+// mobile.js - VERSIÓN FINAL INTEGRADA
 
 const socket = io();
 
 // --- CONFIGURACIÓN ---
-const TIEMPO_MEDICION = 15; // Segundos que dura cada etapa
+const MUESTRAS_OBJETIVO = 20; 
+
+// --- BASE DE CONOCIMIENTO MÉDICO ---
+const RANGOS_MEDICOS = {
+    BPM: [
+        { edadMax: 1, min: 100, max: 180 }, 
+        { edadMax: 3, min: 98, max: 140 },  
+        { edadMax: 5, min: 80, max: 120 },  
+        { edadMax: 12, min: 75, max: 118 }, 
+        { edadMax: 18, min: 60, max: 100 }, 
+        { edadMax: 120, min: 60, max: 100 } 
+    ],
+    TEMP: { hipotermia: 36.0, normalMax: 37.4, fiebreLeve: 38.0 },
+    SPO2: { normal: 95, hipoxiaLeve: 90 }
+};
 
 // --- ESTADO GLOBAL ---
-let paciente = { nombre: "", edad: "" };
-
-// Almacenes de datos (Aquí guardaremos todo lo que llegue en los 15s)
+let patient = { name: "", lastname: "", age: "", sex_id: "", weight: "", height: "" , bmi: "", heart_rate: "", spo2: "", tempObject: ""};
 let historyBPM = [];
 let historySpO2 = [];
 let historyTemp = [];
 
-// Promedios finales
-let avgBPM = 0, avgSpO2 = 0, avgTemp = 0;
-
-// Variables de control de medición
-let currentStep = 1;
+let currentStep = 0;
 let isMeasuring = false;
-let timeLeft = TIEMPO_MEDICION;
-let timerInterval = null;
+let muestrasActuales = 0;
 
+// --- BARRA DE PROGRESO: LÓGICA DE INPUTS (PASO 1) ---
+document.addEventListener("DOMContentLoaded", () => {
+    // Agregamos 'p-lastname' a la lista de inputs a vigilar
+    const inputs = ['p-name', 'p-lastname', 'p-age', 'p-weight', 'p-height'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', actualizarProgresoDatos);
+    });
+});
+
+function actualizarProgresoDatos() {
+    if (currentStep !== 1) return;
+
+    let camposLlenos = 0;
+    if(document.getElementById('p-name').value.trim() !== "") camposLlenos++;
+    if(document.getElementById('p-lastname').value.trim() !== "") camposLlenos++;
+    if(document.getElementById('p-age').value !== "") camposLlenos++;
+    if(document.getElementById('p-weight').value !== "") camposLlenos++;
+    if(document.getElementById('p-height').value !== "") camposLlenos++;
+
+    // Ahora son 5 campos. El paso 1 cubre del 0% al 25%.
+    // Cada campo vale 5% (5 * 5 = 25).
+    const porcentaje = camposLlenos * 5; 
+    setProgressBar(porcentaje);
+}
+
+function setProgressBar(percent) {
+    const finalPercent = Math.round(percent);
+    
+    // 1. Actualizar el ancho de la barra verde (Esto ya funcionaba)
+    document.querySelectorAll('.progress-fill').forEach(el => {
+        el.style.width = finalPercent + "%";
+    });
+
+    // 2. CORRECCIÓN: Actualizar el número usando la NUEVA CLASE
+    // Antes buscaba '.progress-text', ahora busca '.progress-text-overlay'
+    document.querySelectorAll('.progress-text-overlay').forEach(el => {
+        el.innerText = finalPercent + "%";
+    });
+}
 // --- FUNCIONES DE NAVEGACIÓN ---
 
 function nextStep(targetStep) {
-    // 1. Validación del Paso 1
     if(currentStep === 1 && targetStep === 2) {
-        const nombre = document.getElementById('p-name').value;
-        const edad = document.getElementById('p-age').value;
-        if(nombre.trim() === "") return alert("Ingrese nombre");
-        paciente.nombre = nombre;
-        paciente.edad = edad;
-    }
+        const name = document.getElementById('p-name').value;
+        const lastname = document.getElementById('p-lastname').value;
+        const age = document.getElementById('p-age').value;
+        const weight = document.getElementById('p-weight').value;
+        const height = document.getElementById('p-height').value;
+        const sex_id = document.getElementById('p-sex').value; // <--- NUEVO
 
-    // 2. Transición visual
+        if(name.trim() === "" || lastname.trim() === "" || age === "" || weight === "" || height === "" || sex_id === "") {
+            return alert("Por favor complete todos los datos, incluyendo el sexo.");
+        }
+
+        // Guardamos los datos separados para la BD
+        patient.name = name;
+        patient.lastname = lastname;
+        patient.sex_id = sex_id;
+        patient.age = parseInt(age);
+        patient.weight = parseFloat(weight);
+        patient.height = parseFloat(height);
+        
+        setProgressBar(25);
+    }
+    // ... resto de la función igual ...
     document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
     document.getElementById(`step-${targetStep}`).classList.add('active');
-    
     currentStep = targetStep;
-
-    // 3. Preparar la nueva medición según el paso
-    resetMeasurement(); // Reiniciamos temporizadores y banderas
-
-    if(targetStep === 2) console.log("Listo para medir BPM...");
-    if(targetStep === 3) console.log("Listo para medir SpO2...");
-    if(targetStep === 4) console.log("Listo para medir Temp...");
+    resetMeasurement(); 
 }
 
 function resetMeasurement() {
     isMeasuring = false;
-    timeLeft = TIEMPO_MEDICION;
-    clearInterval(timerInterval);
-    // Actualizamos textos de UI
-    if(document.getElementById('timer-bpm')) document.getElementById('timer-bpm').innerText = "Esperando sensor...";
-    if(document.getElementById('timer-spo2')) document.getElementById('timer-spo2').innerText = "Esperando sensor...";
-    if(document.getElementById('timer-temp')) document.getElementById('timer-temp').innerText = "Esperando sensor...";
+    muestrasActuales = 0;
+    const ids = ['timer-bpm', 'timer-spo2', 'timer-temp'];
+    ids.forEach(id => {
+        if(document.getElementById(id)) document.getElementById(id).innerText = "Esperando señal estable...";
+    });
 }
 
-// --- LÓGICA DEL TEMPORIZADOR ---
+// --- LÓGICA DE RECOLECCIÓN Y PROGRESO DINÁMICO ---
 
-function startTimer(type) {
-    if(isMeasuring) return; // Si ya está corriendo, no hacer nada
+function iniciarRecoleccion(type) {
+    if(isMeasuring) return; 
     isMeasuring = true;
+    console.log(`[SISTEMA] Iniciando recolección para ${type}`);
+}
 
-    console.log(`[TIMER] Iniciando cuenta regresiva para ${type}`);
-    
+function actualizarProgreso(type) {
+    const timerElement = document.getElementById(`timer-${type}`);
+    timerElement.innerText = `Midiendo: ${muestrasActuales} / ${MUESTRAS_OBJETIVO} muestras`;
+    timerElement.style.color = "#e67e22";
+
+    // CÁLCULO DE LA BARRA VERDE
+    const avanceEtapa = muestrasActuales / MUESTRAS_OBJETIVO; 
+    let porcentajeTotal = 0;
+
+    if (type === 'bpm') {
+        // Etapa 2: Avanza del 25% al 50%
+        porcentajeTotal = 25 + (avanceEtapa * 25);
+    } else if (type === 'spo2') {
+        // Etapa 3: Avanza del 50% al 75%
+        porcentajeTotal = 50 + (avanceEtapa * 25);
+    } else if (type === 'temp') {
+        // Etapa 4: Avanza del 75% al 100%
+        porcentajeTotal = 75 + (avanceEtapa * 25);
+    }
+
+    setProgressBar(porcentajeTotal);
+}
+
+function finalizarRecoleccion(type) {
+    isMeasuring = false;
     const timerElement = document.getElementById(`timer-${type}`);
     const btnElement = document.getElementById(`btn-${type}`);
 
-    // Intervalo de 1 segundo
-    timerInterval = setInterval(() => {
-        timeLeft--;
-        timerElement.innerText = `Midiendo: ${timeLeft}s restantes`;
-
-        if(timeLeft <= 0) {
-            stopTimer(type, btnElement, timerElement);
-        }
-    }, 1000);
-}
-
-function stopTimer(type, btnElement, timerElement) {
-    clearInterval(timerInterval);
-    isMeasuring = false; // Dejamos de aceptar datos nuevos para el historial
-    
     timerElement.innerText = "✅ Medición completada";
     timerElement.style.color = "green";
-    
-    // Habilitar botón de siguiente
     btnElement.innerText = "Siguiente >";
+    
+    // 1. Habilitar el botón (funcionalidad)
     btnElement.disabled = false;
-
-    // Calcular promedio inmediato para logs (opcional)
-    console.log(`[TIMER] Fin de ${type}. Datos recolectados.`);
+    
+    // 2. NUEVO: Quitar la clase gris para que se vea verde (estilo)
+    btnElement.classList.remove('btn-disabled');
+    
+    // Asegurar hitos exactos
+    if(type === 'bpm') setProgressBar(50);
+    if(type === 'spo2') setProgressBar(75);
+    if(type === 'temp') setProgressBar(100);
 }
 
 // --- RECEPCIÓN DE DATOS (SOCKET) ---
 
 socket.on('sensorData', (data) => {
-    // Valores crudos
     const rawBPM = Math.round(data.heartRate || 0);
     const rawSpO2 = Math.round(data.spo2 || 0);
     const rawTemp = parseFloat(data.tempObject || 0).toFixed(1);
+    const fingerDetected = data.finger_detected === true || data.finger_detected === "True";
 
-    // 1. Mostrar siempre el valor en vivo (feedback visual)
     const elBpm = document.getElementById('val-bpm');
     const elSpo2 = document.getElementById('val-spo2');
     const elTemp = document.getElementById('val-temp');
     
-    if(elBpm) elBpm.innerText = rawBPM;
-    if(elSpo2) elSpo2.innerText = rawSpO2;
+    if(elBpm) elBpm.innerText = (fingerDetected && rawBPM > 0) ? rawBPM : "--";
+    if(elSpo2) elSpo2.innerText = (fingerDetected && rawSpO2 > 0) ? rawSpO2 : "--";
     if(elTemp) elTemp.innerText = rawTemp;
 
-    // 2. LÓGICA DE CAPTURA SEGÚN EL PASO ACTUAL
-    
-    // --- PASO 2: BPM ---
-    if(currentStep === 2) {
-        // Solo empezamos si detectamos un valor válido (> 40 para evitar ruido)
-        if(!isMeasuring && rawBPM > 40 && timeLeft === TIEMPO_MEDICION) {
-            startTimer('bpm');
-        }
-        
-        // Si el tiempo está corriendo, guardamos el dato
-        if(isMeasuring && rawBPM > 40) {
+    if (!isMeasuring && muestrasActuales >= MUESTRAS_OBJETIVO) return;
+
+    // BPM
+    if(currentStep === 2) { 
+        let esValido = fingerDetected && (rawBPM > 40 && rawBPM < 220);
+        if (esValido) {
+            if (!isMeasuring) iniciarRecoleccion('bpm');
             historyBPM.push(rawBPM);
+            muestrasActuales++;
+            actualizarProgreso('bpm');
+            if (muestrasActuales >= MUESTRAS_OBJETIVO) finalizarRecoleccion('bpm');
         }
     }
-
-    // --- PASO 3: SpO2 ---
-    if(currentStep === 3) {
-        if(!isMeasuring && rawSpO2 > 80 && timeLeft === TIEMPO_MEDICION) {
-            startTimer('spo2');
-        }
-        if(isMeasuring && rawSpO2 > 50) {
+    // SpO2
+    if(currentStep === 3) { 
+        let esValido = fingerDetected && (rawSpO2 > 85 && rawSpO2 <= 100);
+        if (esValido) {
+            if (!isMeasuring) iniciarRecoleccion('spo2');
             historySpO2.push(rawSpO2);
+            muestrasActuales++;
+            actualizarProgreso('spo2');
+            if (muestrasActuales >= MUESTRAS_OBJETIVO) finalizarRecoleccion('spo2');
         }
     }
-
-    // --- PASO 4: Temperatura ---
-    if(currentStep === 4) {
-        if(!isMeasuring && rawTemp > 30 && timeLeft === TIEMPO_MEDICION) {
-            startTimer('temp');
-        }
-        if(isMeasuring && rawTemp > 30) {
+    // Temp
+    if(currentStep === 4) { 
+        let esValido = (rawTemp > 32.0 && rawTemp < 45.0);
+        if (esValido) {
+            if (!isMeasuring) iniciarRecoleccion('temp');
             historyTemp.push(parseFloat(rawTemp));
+            muestrasActuales++;
+            actualizarProgreso('temp');
+            if (muestrasActuales >= MUESTRAS_OBJETIVO) finalizarRecoleccion('temp');
         }
     }
 });
 
-// --- FINALIZACIÓN Y GRÁFICAS ---
+// --- DIAGNÓSTICOS ---
 
 function calcularPromedio(arr) {
     if(arr.length === 0) return 0;
@@ -156,38 +223,110 @@ function calcularPromedio(arr) {
     return (sum / arr.length).toFixed(1);
 }
 
-function finalizar() {
-    // 1. Calcular promedios finales
-    avgBPM = Math.round(calcularPromedio(historyBPM));
-    avgSpO2 = Math.round(calcularPromedio(historySpO2));
-    avgTemp = calcularPromedio(historyTemp);
+function obtenerDiagnosticoIMC(peso, tallaCm) {
+    let tallaM = (tallaCm > 3.0) ? tallaCm / 100 : tallaCm; 
+    if (tallaM === 0) return { valor: 0, texto: "Error", color: "black" };
+    const imc = (peso / (tallaM * tallaM)).toFixed(1);
+    let diag = "", color = "";
+    if (imc < 18.5) { diag = "Bajo Peso"; color = "#e74c3c"; } 
+    else if (imc < 25) { diag = "Normal"; color = "#27ae60"; } 
+    else if (imc < 30) { diag = "Sobrepeso"; color = "#f39c12"; } 
+    else { diag = "Obesidad"; color = "#c0392b"; } 
+    return { valor: imc, texto: diag, color: color };
+}
 
-    // 2. Mostrar Resumen Texto
+function obtenerDiagnosticoBPM(bpm, edad) {
+    const rango = RANGOS_MEDICOS.BPM.find(r => edad <= r.edadMax) || RANGOS_MEDICOS.BPM[RANGOS_MEDICOS.BPM.length - 1];
+    let diag = "", color = "";
+    if (bpm < rango.min) { diag = "Bradicardia"; color = "#f39c12"; } 
+    else if (bpm > rango.max) { diag = "Taquicardia"; color = "#c0392b"; } 
+    else { diag = "Normal"; color = "#27ae60"; }
+    return { valor: bpm, texto: diag, color: color, rango: `${rango.min}-${rango.max}` };
+}
+
+function obtenerDiagnosticoTemp(temp) {
+    let diag = "", color = "";
+    const r = RANGOS_MEDICOS.TEMP;
+    if (temp < r.hipotermia) { diag = "Hipotermia"; color = "#3498db"; } 
+    else if (temp <= r.normalMax) { diag = "Normal"; color = "#27ae60"; } 
+    else if (temp <= r.fiebreLeve) { diag = "Febrícula"; color = "#f39c12"; } 
+    else { diag = "Fiebre"; color = "#c0392b"; }
+    return { valor: temp, texto: diag, color: color };
+}
+
+function obtenerDiagnosticoSpO2(spo2) {
+    let diag = "", color = "";
+    const r = RANGOS_MEDICOS.SPO2;
+    if (spo2 >= r.normal) { diag = "Normal"; color = "#27ae60"; } 
+    else if (spo2 >= r.hipoxiaLeve) { diag = "Hipoxia Leve"; color = "#f39c12"; } 
+    else { diag = "Hipoxia Sev."; color = "#c0392b"; }
+    return { valor: spo2 + "%", texto: diag, color: color };
+}
+
+// --- FINALIZACIÓN ---
+
+function finalizar() {
+    const valBPM = Math.round(calcularPromedio(historyBPM));
+    const valSpO2 = Math.round(calcularPromedio(historySpO2));
+    const valTemp = calcularPromedio(historyTemp);
+
+    const dIMC = obtenerDiagnosticoIMC(patient.weight, patient.height);
+    const dBPM = obtenerDiagnosticoBPM(valBPM, patient.age);
+    const dSpO2 = obtenerDiagnosticoSpO2(valSpO2);
+    const dTemp = obtenerDiagnosticoTemp(valTemp);
+
+    patient.heart_rate = valBPM;
+    patient.spo2 = valSpO2;
+    patient.tempObject = valTemp;
+    patient.bmi = dIMC.valor;
+
+    guardarEnBaseDeDatos();
+
     const resumenHTML = `
-        <p><strong>👤 Paciente:</strong> ${paciente.nombre} (${paciente.edad} años)</p>
+        <div style="background: #eef2f3; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <p style="margin:5px 0; font-size: 1.2rem;"><strong>👤 ${patient.name}</strong> (${patient.age} años)</p>
+            <p style="margin:5px 0; color: #555;">📏 ${patient.height} cm | ⚖️ ${patient.weight} kg</p>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px;">
+            <div style="flex: 1; min-width: 140px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid ${dIMC.color};">
+                <div style="font-size: 0.8rem; color: #7f8c8d; font-weight: bold;">IMC</div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: ${dIMC.color}; margin: 5px 0;">${dIMC.valor}</div>
+                <div style="font-size: 0.9rem; font-weight: bold; color: ${dIMC.color}; text-transform: uppercase;">${dIMC.texto}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid ${dBPM.color};">
+                <div style="font-size: 0.8rem; color: #7f8c8d; font-weight: bold;">RITMO (BPM)</div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: ${dBPM.color}; margin: 5px 0;">${dBPM.valor}</div>
+                <div style="font-size: 0.9rem; font-weight: bold; color: ${dBPM.color}; text-transform: uppercase;">${dBPM.texto}</div>
+                <div style="font-size: 0.7rem; color: #aaa;">Rango: ${dBPM.rango}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid ${dSpO2.color};">
+                <div style="font-size: 0.8rem; color: #7f8c8d; font-weight: bold;">OXÍGENO</div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: ${dSpO2.color}; margin: 5px 0;">${dSpO2.valor}</div>
+                <div style="font-size: 0.9rem; font-weight: bold; color: ${dSpO2.color}; text-transform: uppercase;">${dSpO2.texto}</div>
+            </div>
+            <div style="flex: 1; min-width: 140px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid ${dTemp.color};">
+                <div style="font-size: 0.8rem; color: #7f8c8d; font-weight: bold;">TEMP (°C)</div>
+                <div style="font-size: 1.8rem; font-weight: bold; color: ${dTemp.color}; margin: 5px 0;">${dTemp.valor}</div>
+                <div style="font-size: 0.9rem; font-weight: bold; color: ${dTemp.color}; text-transform: uppercase;">${dTemp.texto}</div>
+            </div>
+        </div>
         <hr>
-        <p>❤️ <strong>Promedio BPM:</strong> ${avgBPM}</p>
-        <p>💧 <strong>Promedio SpO2:</strong> ${avgSpO2}%</p>
-        <p>🌡️ <strong>Promedio Temp:</strong> ${avgTemp}°C</p>
     `;
+    
     document.getElementById('resumen-texto').innerHTML = resumenHTML;
 
-    // 3. Ir al paso 5
     nextStep(5);
 
-    // 4. DIBUJAR LAS GRÁFICAS (Chart.js)
-    // Pequeño delay para asegurar que el canvas sea visible
     setTimeout(() => {
-        dibujarGrafico('chartBPM', 'BPM', historyBPM, 'red');
-        dibujarGrafico('chartSpO2', 'SpO2 %', historySpO2, 'blue');
-        dibujarGrafico('chartTemp', 'Temp °C', historyTemp, 'orange');
+        dibujarGrafico('chartBPM', 'BPM', historyBPM, dBPM.color);
+        dibujarGrafico('chartSpO2', 'SpO2 %', historySpO2, dSpO2.color);
+        // dibujarGrafico('chartTemp', 'Temp °C', historyTemp, dTemp.color); // Oculto
     }, 100);
 }
 
 function dibujarGrafico(canvasId, label, dataArray, color) {
     const ctx = document.getElementById(canvasId).getContext('2d');
-    
-    // Generamos etiquetas simples (1, 2, 3...) para el eje X
     const labels = dataArray.map((_, index) => index + 1);
 
     new Chart(ctx, {
@@ -200,18 +339,53 @@ function dibujarGrafico(canvasId, label, dataArray, color) {
                 borderColor: color,
                 backgroundColor: color,
                 borderWidth: 2,
-                pointRadius: 1,
-                tension: 0.4 // Suaviza la curva
+                pointRadius: 2,
+                tension: 0.4 
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } }, // Ocultar leyenda para ahorrar espacio
-            scales: {
-                x: { display: false }, // Ocultar eje X
-                y: { beginAtZero: false } // Auto-escala eje Y
-            }
+            plugins: { legend: { display: false } }, 
+            scales: { x: { display: false }, y: { beginAtZero: false } }
         }
     });
+}
+
+async function guardarEnBaseDeDatos() {
+    const datospatient = {
+        name: patient.name,
+        lastname: patient.lastname,
+        age: patient.age,
+        sex_id: patient.sex_id,
+        weight: patient.weight,
+        height: patient.height,
+        bmi: patient.bmi,
+        heart_rate: patient.heart_rate,
+        spo2: patient.spo2,
+        tempObject: patient.tempObject,
+        history_bpm: historyBPM, 
+        history_spo2: historySpO2
+    };
+
+    try {
+        const respuesta = await fetch('/api/guardar_paciente', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(datospatient)
+        });
+
+        const resultado = await respuesta.json();
+        if (resultado.status === 'success') {
+            console.log("✅ Datos guardados en MySQL correctamente ID:", resultado.id);
+            alert("¡Chequeo guardado en la base de datos!");
+        } else {
+            console.error("❌ Error guardando datos:", resultado.message);
+            alert("Hubo un error al guardar en la base de datos.");
+        }
+    } catch (error) {
+        console.error("❌ Error de red:", error);
+    }
 }

@@ -1,7 +1,9 @@
 # server.py
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, render_template, request, jsonify
 from flask_socketio import SocketIO
 from pathlib import Path
+import mysql.connector
+import json
 
 BASE_DIR = Path(__file__).parent.resolve()
 STATIC_DIR = BASE_DIR / "public"
@@ -29,10 +31,14 @@ def mobile_interface():
     # Esta ruta servirá el archivo HTML específico para el celular
     return send_from_directory(STATIC_DIR, "mobile/index.html")
 
-# Si agregas una tercera página en el futuro:
 @app.route("/monitoring")
 def monitoring_interface():
     return send_from_directory(STATIC_DIR, "monitoring/index.html")
+
+@app.route("/monitoring/details/<int:patient_id>")
+def patient_detail_view(patient_id):
+    # Servimos un archivo nuevo llamado "detail.html"
+    return send_from_directory(STATIC_DIR, "monitoring/details/index.html")
 
 # --- Rutas Blink ---
 @app.route("/blink/<int:flag>")
@@ -121,6 +127,135 @@ def recibir_telemetria():
 
     return jsonify({"status": "ok", "face": faceFlag})
 
+# --- CONFIGURACIÓN DE BASE DE DATOS ---
+db_config = {
+    'host': 'sql10.freesqldatabase.com',
+    'user': 'sql10814340',       # Cambia esto por tu usuario de MySQL
+    'password': 'D7bqFtWLuP', # Cambia esto por tu contraseña de MySQL
+    'database': 'sql10814340'
+}
+
+# --- NUEVA RUTA API PARA GUARDAR ---
+@app.route('/api/guardar_paciente', methods=['POST'])
+def guardar_paciente():
+    try:
+        data = request.json
+        
+        # Conexión a la BD
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+        
+        # Si el frontend envía [70, 72, 75], esto lo convierte a "[70, 72, 75]"
+        bpm_json = json.dumps(data.get('history_bpm', []))
+        spo2_json = json.dumps(data.get('history_spo2', []))
+
+        # Query SQL
+        sql = """
+            INSERT INTO patients 
+            (name, lastname, age, sex_id, weight, height, bmi, heart_rate, spo2, tempObject, history_bpm, history_spo2)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        
+        valores = (
+            data['name'],
+            data['lastname'],
+            data['age'],
+            data['sex_id'],
+            data['weight'],
+            data['height'],
+            data['bmi'],
+            data['heart_rate'],
+            data['spo2'],
+            data['tempObject'],
+            bpm_json,
+            spo2_json
+        )
+        
+        cursor.execute(sql, valores)
+        conn.commit() # Importante para guardar cambios
+        new_id = cursor.lastrowid
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"status": "success", "id": new_id, "message": "Paciente registrado"}), 200
+
+    except mysql.connector.Error as err:
+        print(f"Error SQL: {err}")
+        return jsonify({"status": "error", "message": str(err)}), 500
+    except Exception as e:
+        print(f"Error General: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/pacientes", methods=["GET"])
+def obtener_pacientes():
+    try:
+        # 1. Obtener parámetros de la URL (Query Params)
+        page = request.args.get('page', 1, type=int)
+        search = request.args.get('search', '', type=str)
+        limit = 5  # Cantidad de pacientes por página (como en tu imagen)
+        offset = (page - 1) * limit
+
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True) # dictionary=True es CLAVE para JSON
+
+        # 2. Construir la Query Dinámica (Búsqueda + Paginación)
+        query = """
+            SELECT id, name, lastname, age, sex_id, date_register 
+            FROM patients 
+            WHERE name LIKE %s OR lastname LIKE %s 
+            ORDER BY date_register DESC 
+            LIMIT %s OFFSET %s
+        """
+        search_pattern = f"%{search}%"
+        cursor.execute(query, (search_pattern, search_pattern, limit, offset))
+        pacientes = cursor.fetchall()
+
+        # 3. Obtener el total de registros (para saber cuántas páginas hay)
+        count_query = "SELECT COUNT(*) as total FROM patients WHERE name LIKE %s OR lastname LIKE %s"
+        cursor.execute(count_query, (search_pattern, search_pattern))
+        total_records = cursor.fetchone()['total']
+        
+        cursor.close()
+        conn.close()
+
+        # 4. Responder JSON
+        return jsonify({
+            "status": "success",
+            "data": pacientes,
+            "page": page,
+            "limit": limit,
+            "total_records": total_records,
+            "total_pages": (total_records + limit - 1) // limit
+        })
+
+    except Exception as e:
+        print(f"Error API Pacientes: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# 2. API para obtener un paciente específico (Backend)
+@app.route("/api/pacientes/<int:id>", methods=["GET"])
+def obtener_paciente_id(id):
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor(dictionary=True)
+        
+        # Query para buscar por ID
+        query = "SELECT * FROM patients WHERE id = %s"
+        cursor.execute(query, (id,))
+        paciente = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+
+        if paciente:
+            return jsonify({"status": "success", "data": paciente})
+        else:
+            return jsonify({"status": "error", "message": "Paciente no encontrado"}), 404
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
 # --- Eventos Socket.IO ---
 @socketio.on("connect")
 def handle_connect():

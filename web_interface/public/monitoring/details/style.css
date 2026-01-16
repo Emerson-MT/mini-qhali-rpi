@@ -1,0 +1,247 @@
+/* monitoring/details/detail.css */
+
+.detail-container {
+    padding-top: 10px;
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 15px;
+    color: #00008b;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+/* --- BARRA DE DATOS SUPERIOR --- */
+.patient-header-card {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    margin-bottom: 25px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.ph-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ph-label {
+    color: #00008b;
+    font-weight: bold;
+    font-size: 1.2rem;
+    font-family: 'Playfair Display', serif;
+}
+
+.ph-value {
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.ph-value.box-value {
+    background: rgba(255,255,255,0.6);
+    padding: 5px 15px;
+    border-radius: 10px;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    font-weight: 500;
+}
+
+.name-item .ph-value {
+    background: rgba(255,255,255,0.6);
+    padding: 5px 20px;
+    border-radius: 10px;
+    min-width: 250px;
+}
+
+/* --- ESTRUCTURA DE GRILLA --- */
+.detail-grid {
+    display: grid;
+    /* Definimos 3 columnas: 
+       - 1fr (flexible) para gráficos (aprox 50%)
+       - 0.5fr para rangos (aprox 25%)
+       - 0.5fr para robot (aprox 25%) 
+    */
+    grid-template-columns: 2fr 0.8fr 0.8fr; 
+    
+    /* Definimos filas automáticas */
+    grid-template-rows: auto auto; 
+    
+    gap: 20px;
+    align-items: start; /* Alineación superior */
+}
+
+/* Columna 1: Gráficos (Ocupa la primera columna, todas las filas verticales necesarias) */
+.left-column {
+    grid-column: 1 / 2; /* Columna 1 */
+    grid-row: 1 / 3;    /* Abarca desde la fila 1 hasta el final (para que las notas no se metan debajo) */
+    
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0; /* Vital para Chart.js */
+}
+
+/* Columna 2: Rangos (Medio) */
+.middle-column {
+    grid-column: 2 / 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centrado verticalmente si quieres */
+    align-items: center;
+    padding-top: 20px;
+}
+
+/* Columna 3: Robot (Derecha) */
+.right-column {
+    grid-column: 3 / 4;
+    display: flex;
+    justify-content: center;
+}
+
+/* --- GRÁFICOS --- */
+.chart-box h3 {
+    color: #00008b;
+    margin: 0 0 10px 0;
+    font-family: 'Playfair Display', serif;
+}
+
+.chart-placeholder {
+    background: black;
+    height: 120px;
+    border-radius: 5px;
+    border: 2px solid #ddd;
+    color: #0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: monospace;
+}
+
+/* --- PÍLDORAS DE VALORES --- */
+.values-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.val-pill {
+    text-align: center;
+}
+
+.val-pill span {
+    display: block;
+    color: #00008b;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.pill-box {
+    background: #ccc;
+    padding: 8px 25px;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 1.2rem;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+}
+
+/* --- COLUMNA DERECHA --- */
+.range-tag {
+    padding: 8px;
+    margin-bottom: 10px;
+    text-align: center;
+    border-radius: 10px;
+    font-weight: bold;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+.range-tag.yellow { background: #f0e68c; color: #333; }
+.range-tag.green { background: #90ee90; color: #006400; }
+.range-tag.red { background: #e9967a; color: #8b0000; }
+
+.robot-detail-scene {
+    display: flex;
+    flex-direction: column; /* Esto pone la burbuja ARRIBA y la imagen ABAJO */
+    align-items: center;    /* Los centra horizontalmente */
+    margin: 20px 0;
+    position: relative;
+}
+
+.robot-detail-scene img {
+    width: 140px;           /* Tamaño del robot */
+    margin-top: 5px;        /* Un poquito de espacio entre la flecha y la cabeza */
+}
+
+/* Estilo de la burbuja */
+.speech-bubble-small {
+    background: #89AACE;    /* Mismo azul claro que en mobile */
+    color: #000000;            /* Texto blanco o oscuro según prefieras */
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    text-align: center;
+    position: relative;     /* Necesario para posicionar el triangulito */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 180px;       /* Para que no se estire demasiado */
+}
+
+/* El triangulito (flecha) apuntando hacia abajo */
+.speech-bubble-small::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;          /* Lo empujamos debajo de la burbuja */
+    left: 50%;
+    transform: translateX(-50%); /* Lo centramos perfectamente */
+    
+    /* Dibujo del triángulo con bordes CSS */
+    border-width: 10px 10px 0; 
+    border-style: solid;
+    border-color: #89AACE transparent transparent transparent;
+}
+
+/* Notas: Ocupan Columnas 2 y 3 (Medio y Derecha) */
+.notes-box {
+    grid-column: 2 / 4; /* Empieza en la línea 2, termina en la 4 (ocupa col 2 y 3) */
+    
+    background: #89AACE;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    font-size: 0.9rem;
+    border: 1px solid #5d7a96;
+    margin-top: 10px; /* Un poco de aire arriba */
+    margin-left: 30px;
+}
+
+.notes-box ul {
+    padding-left: 15px;
+    margin: 5px 0 0 0;
+}
+
+/* --- GRÁFICOS ESTILO MONITOR --- */
+.chart-box h3 {
+    color: #00008b;
+    margin: 0 0 10px 0;
+    font-family: 'Playfair Display', serif;
+}
+
+/* Contenedor del Canvas */
+.medical-chart {
+    background: #000; /* Fondo Negro Médico */
+    height: 150px;     /* Un poco más alto para que se vea bien */
+    width: 100%;
+    border-radius: 5px;
+    border: 2px solid #555;
+    position: relative; /* Necesario para que Chart.js se ajuste */
+    overflow: hidden;
+    padding: 10px;
+    box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1); /* Brillo sutil interno */
+}
