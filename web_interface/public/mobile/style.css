@@ -96,14 +96,14 @@ body {
 
 /* --- IMÁGENES DEL ROBOT --- */
 .robot-img-small {
-    width: 120px;
+    width: 300px;
     height: auto;
     border-radius: 10px; /* Opcional si la imagen es cuadrada */
 }
 
 .robot-main-img {
     width: 100%;
-    max-width: 300px;
+    max-width: 1200px;
     border-radius: 15px;
     /* Efecto de recorte o integración si la imagen tiene fondo */
     mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
@@ -142,8 +142,8 @@ body {
 }
 
 .intro-image-container {
-    width: 250px;
-    height: 350px;
+    width: 400px;
+    height: 500px;
     margin-bottom: 40px;
     position: relative;
     /* Efecto de resplandor detrás del robot */
