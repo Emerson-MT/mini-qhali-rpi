@@ -10,6 +10,8 @@ idna==3.11
 itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.3
+mysql-connector-python==9.5.0
+paho-mqtt==2.1.0
 pyserial==3.5
 python-engineio==4.12.3
 python-socketio==5.15.1
