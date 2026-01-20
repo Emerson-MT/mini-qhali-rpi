@@ -196,7 +196,7 @@ socket.on('sensorData', (data) => {
         let esValido = fingerDetected && (rawSpO2 > 85 && rawSpO2 <= 100);
         if (esValido) {
             if (!isMeasuring) iniciarRecoleccion('spo2');
-            historySpO2.push(rawSpO2);
+            historySpO2.push(rawSpO2 - 5);
             muestrasActuales++;
             actualizarProgreso('spo2');
             if (muestrasActuales >= MUESTRAS_OBJETIVO) finalizarRecoleccion('spo2');
