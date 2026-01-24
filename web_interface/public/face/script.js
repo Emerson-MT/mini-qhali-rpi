@@ -1,28 +1,24 @@
-// script.js (Cara del Robot)
+// face/script.js
 
 // ==========================================
-// 1. DEFINICIÓN DE FUNCIONES (Herramientas)
+// 1. DEFINICIÓN DE FUNCIONES (Visuales)
 // ==========================================
 
 // --- Control de parpadeo ---
-// Regla: blinkFlag = 0 -> animaciones ON, 1 -> animaciones OFF
 (function () {
   const root = document.body;
-
   window.setBlink = function setBlink(flag) {
     const paused = Number(flag) === 1;
     if (paused) {
       root.classList.add("blink-off");
-      console.log("[CLIENT] Parpadeo: OFF (blinkFlag=1)");
     } else {
       root.classList.remove("blink-off");
-      console.log("[CLIENT] Parpadeo: ON  (blinkFlag=0)");
     }
   };
 })();
 
 // --- Control de rostro (mejillas) ---
-// faceFlag: 0=normal, 1=rojo, 2=azul, 3=verde
+// faceFlag: 0=normal, 1=rojo (fiebre), 2=azul (hipotermia), 3=verde (hipoxia)
 (function () {
   const root = document.body;
   const cls = ["face-1", "face-2", "face-3"];
@@ -33,41 +29,65 @@
     cls.forEach(c => root.classList.remove(c));
     // Agrega la nueva si corresponde
     if (f >= 1 && f <= 3) root.classList.add(`face-${f}`);
-    console.log("[CLIENT] setFace ->", f);
+    console.log("[CLIENT] Cara cambiada a estado:", f);
   };
 })();
 
-// --- Control de Sensores (HUD) ---
-// (Desactivado visualmente en la cara, pero mantenemos la función vacía para evitar errores)
-window.updateSensors = function(data) {
-    // Aquí podrias hacer console.log si quieres depurar sin ensuciar la pantalla
-    // console.log("[DEBUG] Datos latentes:", data);
-};
-
-
 // ==========================================
-// 2. CONEXIÓN Y EVENTOS (Lógica)
+// 2. LÓGICA DE SOCKETS
 // ==========================================
 
 const socket = io();
 
-socket.on("connect", () => console.log("[CLIENT] Cara conectada al cerebro:", socket.id));
+// ESTADO: Determina si la cara está "bloqueada" mostrando el diagnóstico final
+let isShowingResults = false; 
 
-// Como las funciones ya están definidas arriba, podemos llamarlas directamente
+socket.on("connect", () => console.log("[CLIENT] Cara conectada al cerebro"));
+
+// --- A) EVENTOS BÁSICOS ---
 socket.on('blinkFlag', (value) => setBlink(value));
-socket.on('faceFlag', (value)  => setFace(value));
-socket.on('sensorData', (data) => updateSensors(data));
 
+// --- B) CAMBIO DE CARA EN VIVO ---
+// Este evento lo envía el servidor automáticamente cuando llegan datos del sensor.
+socket.on('faceFlag', (value) => {
+    // IMPORTANTE: Solo cambiamos la cara si NO estamos mostrando el resultado final.
+    // Esto evita que el sensor "interrumpa" la reacción final.
+    if (!isShowingResults) {
+        setFace(value);
+    }
+});
+
+// --- C) RESULTADOS FINALES (Evento nuevo) ---
+// Este evento llega cuando en el celular se pulsa "Finalizar"
+socket.on('show_results', (data) => {
+    console.log("🏁 Diagnóstico final recibido:", data);
+    
+    // 1. Bloqueamos actualizaciones futuras de los sensores
+    isShowingResults = true;
+
+    // 2. Forzamos la cara correspondiente al diagnóstico final
+    // data.faceColor viene calculado desde mobile.js
+    setFace(data.faceColor); 
+});
+
+// --- D) RESETEAR (Opcional) ---
+// Para desbloquear la cara cuando inicies un nuevo paciente
+socket.on('reset_face', () => {
+    console.log("🔄 Reseteando cara para nuevo paciente");
+    isShowingResults = false;
+    setFace(0); // Vuelve a normal
+});
 
 // ==========================================
-// 3. INICIALIZACIÓN (Estado al cargar)
+// 3. INICIALIZACIÓN
 // ==========================================
 
-// Pedimos al servidor el estado actual por si llegamos tarde a la fiesta
+// Sincronizar estado inicial al cargar la página
 Promise.all([
   fetch('/blink').then(r => r.json()),
   fetch('/face').then(r => r.json())
 ]).then(([{ blinkFlag }, { faceFlag }]) => {
   setBlink(blinkFlag);
-  setFace(faceFlag);
+  // Solo aplicamos la cara inicial si no estamos bloqueados (por seguridad)
+  if(!isShowingResults) setFace(faceFlag);
 }).catch(console.error);

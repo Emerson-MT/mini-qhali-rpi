@@ -91,11 +91,15 @@
 /* Columna 2: Rangos (Medio) */
 .middle-column {
     grid-column: 2 / 3;
+    grid-row: 1 / 2; /* Se queda en la fila 1 para no tapar las notas */
+    
+    /* --- CAMBIOS CLAVE --- */
+    align-self: stretch; /* 1. Se estira para ser tan alta como la columna del Robot */
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Centrado verticalmente si quieres */
+    justify-content: center; /* 2. Ahora sí tiene espacio vertical para centrar el contenido */
     align-items: center;
-    padding-top: 20px;
+    /* padding-top: 20px;  <-- QUITA ESTO si quieres un centrado matemático perfecto */
 }
 
 /* Columna 3: Robot (Derecha) */
@@ -175,7 +179,7 @@
 }
 
 .robot-detail-scene img {
-    width: 140px;           /* Tamaño del robot */
+    width: 220px;           /* Tamaño del robot */
     margin-top: 5px;        /* Un poquito de espacio entre la flecha y la cabeza */
 }
 
@@ -234,14 +238,18 @@
 }
 
 /* Contenedor del Canvas */
+/* Contenedor del Canvas */
 .medical-chart {
-    background: #000; /* Fondo Negro Médico */
-    height: 150px;     /* Un poco más alto para que se vea bien */
+    background: #000; 
+    
+    /* CAMBIA ESTO: de 150px a 250px o lo que gustes */
+    height: 250px;     
+    
     width: 100%;
     border-radius: 5px;
     border: 2px solid #555;
-    position: relative; /* Necesario para que Chart.js se ajuste */
+    position: relative; 
     overflow: hidden;
     padding: 10px;
-    box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1); /* Brillo sutil interno */
+    box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1); 
 }

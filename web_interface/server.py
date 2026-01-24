@@ -4,6 +4,8 @@ from flask_socketio import SocketIO
 from pathlib import Path
 import mysql.connector
 import json
+from datetime import datetime
+import pytz
 
 BASE_DIR = Path(__file__).parent.resolve()
 STATIC_DIR = BASE_DIR / "public"
@@ -109,7 +111,7 @@ def recibir_telemetria():
     if finger: # Solo cambiamos la cara si hay un dedo detectado
         if temp_obj > 37.5:
             nuevo_estado = 1 # Fiebre -> ROJO
-        elif temp_obj < 35.0:
+        elif temp_obj > 30.0 and temp_obj < 35.0:
             nuevo_estado = 2 # Hipotermia -> AZUL
         elif spo2 < 90 and spo2 > 0:
             nuevo_estado = 3 # Falta aire -> VERDE 
@@ -130,9 +132,9 @@ def recibir_telemetria():
 # --- CONFIGURACIÓN DE BASE DE DATOS ---
 db_config = {
     'host': 'sql10.freesqldatabase.com',
-    'user': 'sql10814340',       # Cambia esto por tu usuario de MySQL
-    'password': 'D7bqFtWLuP', # Cambia esto por tu contraseña de MySQL
-    'database': 'sql10814340'
+    'user': 'sql10815178',       # Cambia esto por tu usuario de MySQL
+    'password': '5LNS15uY8G', # Cambia esto por tu contraseña de MySQL
+    'database': 'sql10815178'
 }
 
 # --- NUEVA RUTA API PARA GUARDAR ---
@@ -140,11 +142,15 @@ db_config = {
 def guardar_paciente():
     try:
         data = request.json
+
+        # Obtener la hora actual de Lima
+        zona_lima = pytz.timezone('America/Lima')
+        fecha_lima = datetime.now(zona_lima).strftime('%Y-%m-%d %H:%M:%S')
         
         # Conexión a la BD
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
-        
+
         # Si el frontend envía [70, 72, 75], esto lo convierte a "[70, 72, 75]"
         bpm_json = json.dumps(data.get('history_bpm', []))
         spo2_json = json.dumps(data.get('history_spo2', []))
@@ -152,8 +158,8 @@ def guardar_paciente():
         # Query SQL
         sql = """
             INSERT INTO patients 
-            (name, lastname, age, sex_id, weight, height, bmi, heart_rate, spo2, tempObject, history_bpm, history_spo2)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (name, lastname, age, sex_id, weight, height, bmi, heart_rate, history_bpm, spo2, history_spo2, tempObject, date_register)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         
         valores = (
@@ -165,10 +171,11 @@ def guardar_paciente():
             data['height'],
             data['bmi'],
             data['heart_rate'],
-            data['spo2'],
-            data['tempObject'],
             bpm_json,
-            spo2_json
+            data['spo2'],
+            spo2_json,
+            data['tempObject'],
+            fecha_lima
         )
         
         cursor.execute(sql, valores)
@@ -262,13 +269,29 @@ def handle_connect():
     print("✅ Cliente conectado")
     socketio.emit("blinkFlag", blinkFlag)
     socketio.emit("faceFlag", faceFlag)
+    '''
     if last_sensor_data:
         print(f"   -> Enviando memoria al nuevo cliente: {last_sensor_data}")
         socketio.emit("sensorData", last_sensor_data)
+    '''
 
 @socketio.on("disconnect")
 def handle_disconnect():
     print("❌ Cliente desconectado")
+
+@socketio.on('finalizar_chequeo')
+def handle_final_results(data):
+    # data contiene: { temp, spo2, bpm, faceColor }
+    print(f"🏁 Chequeo finalizado. Resultados: {data}")
+    # Reenviamos esto a la cara con un evento específico
+    socketio.emit('show_results', data)
+
+@socketio.on('reset_face')
+def handle_reset_face():
+    print("🔄 Reiniciando sistema para nuevo paciente")
+    # Le avisa a TODOS (incluida la cara) que se reinicien
+    socketio.emit('reset_face')
+
 
 if __name__ == "__main__":
     print("🚀 Servidor listo en http://localhost:3000")
@@ -276,3 +299,4 @@ if __name__ == "__main__":
     print("👉 Blink: GET /blink/0 (natural) | /blink/1 (pausar) | GET/POST /blink")
     print("👉 Face:  GET /face/0 (normal) | /face/1 (rojo) | /face/2 (azul) | /face/3 (verde) | GET/POST /face")
     socketio.run(app, host="0.0.0.0", port=3000, allow_unsafe_werkzeug=True)
+ 

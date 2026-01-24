@@ -35,10 +35,10 @@ async function fetchPatientDetails(id) {
             // 2. Generar Notas (Igual que antes)
             const notesList = document.getElementById('d-notes');
             notesList.innerHTML = "";
-            if(p.tempObject > 37.5) notesList.innerHTML += "<li>• Temperatura corporal elevada.</li>";
-            if(p.spo2 < 95) notesList.innerHTML += "<li>• Saturación de oxígeno baja.</li>";
-            if(p.heart_rate > 100) notesList.innerHTML += "<li>• Frecuencia cardiaca elevada.</li>";
-            if(notesList.innerHTML === "") notesList.innerHTML = "<li>Valores dentro de rangos normales.</li>";
+            if(p.tempObject > 37.5) notesList.innerHTML += "<li> Temperatura corporal elevada.</li>";
+            if(p.spo2 < 95) notesList.innerHTML += "<li> Saturación de oxígeno baja.</li>";
+            if(p.heart_rate > 100) notesList.innerHTML += "<li> Frecuencia cardiaca elevada.</li>";
+            if(notesList.innerHTML === "") notesList.innerHTML = "<li> Valores dentro de rangos normales.</li>";
 
             // 3. PROCESAR DATOS DE GRÁFICOS (NUEVO)
             // Convertimos el texto de la DB a Arreglo real.

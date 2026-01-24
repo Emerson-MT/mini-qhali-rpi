@@ -20,9 +20,7 @@ const RANGOS_MEDICOS = {
 };
 
 // --- ESTADO GLOBAL ---
-let patient = { name: "", lastname: "", age: "", sex_id: "", weight: "", height: "" , bmi: "", heart_rate: "", spo2: "", tempObject: ""};
-let historyBPM = [];
-let historySpO2 = [];
+let patient = { name: "", lastname: "", age: "", sex_id: "", weight: "", height: "" , bmi: "", heart_rate: "", historyBPM: [], spo2: "", historySpO2: [], tempObject: ""};
 let historyTemp = [];
 
 let currentStep = 0;
@@ -108,6 +106,11 @@ function resetMeasurement() {
     ids.forEach(id => {
         if(document.getElementById(id)) document.getElementById(id).innerText = "Esperando señal estable...";
     });
+
+    // Si estamos volviendo al paso 1 o iniciando, avisamos a la cara que se despierte
+    if (currentStep === 1) { 
+        socket.emit('reset_face'); 
+    }
 }
 
 // --- LÓGICA DE RECOLECCIÓN Y PROGRESO DINÁMICO ---
@@ -116,6 +119,11 @@ function iniciarRecoleccion(type) {
     if(isMeasuring) return; 
     isMeasuring = true;
     console.log(`[SISTEMA] Iniciando recolección para ${type}`);
+
+    // --- AGREGAR ESTO PARA EVITAR MEZCLAR DATOS VIEJOS ---
+    if (type === 'bpm') patient.historyBPM = [];
+    if (type === 'spo2') patient.historySpO2 = [];
+    if (type === 'temp') historyTemp = [];
 }
 
 function actualizarProgreso(type) {
@@ -185,7 +193,7 @@ socket.on('sensorData', (data) => {
         let esValido = fingerDetected && (rawBPM > 40 && rawBPM < 220);
         if (esValido) {
             if (!isMeasuring) iniciarRecoleccion('bpm');
-            historyBPM.push(rawBPM);
+            patient.historyBPM.push(rawBPM);
             muestrasActuales++;
             actualizarProgreso('bpm');
             if (muestrasActuales >= MUESTRAS_OBJETIVO) finalizarRecoleccion('bpm');
@@ -196,7 +204,7 @@ socket.on('sensorData', (data) => {
         let esValido = fingerDetected && (rawSpO2 > 85 && rawSpO2 <= 100);
         if (esValido) {
             if (!isMeasuring) iniciarRecoleccion('spo2');
-            historySpO2.push(rawSpO2 - 5);
+            patient.historySpO2.push(rawSpO2 - 5);
             muestrasActuales++;
             actualizarProgreso('spo2');
             if (muestrasActuales >= MUESTRAS_OBJETIVO) finalizarRecoleccion('spo2');
@@ -266,8 +274,8 @@ function obtenerDiagnosticoSpO2(spo2) {
 // --- FINALIZACIÓN ---
 
 function finalizar() {
-    const valBPM = Math.round(calcularPromedio(historyBPM));
-    const valSpO2 = Math.round(calcularPromedio(historySpO2));
+    const valBPM = Math.round(calcularPromedio(patient.historyBPM));
+    const valSpO2 = Math.round(calcularPromedio(patient.historySpO2));
     const valTemp = calcularPromedio(historyTemp);
 
     const dIMC = obtenerDiagnosticoIMC(patient.weight, patient.height);
@@ -281,6 +289,25 @@ function finalizar() {
     patient.bmi = dIMC.valor;
 
     guardarEnBaseDeDatos();
+
+    // 1. Determinar qué cara poner basada en el diagnóstico final
+    let colorFinal = 0; // Normal
+    if (dTemp.color === "#c0392b" || dTemp.color === "#3498db") colorFinal = 1; // Fiebre/Hipotermia (Rojo/Azul - simplificado a Rojo aquí o ajusta lógica)
+    if (dSpO2.color === "#c0392b") colorFinal = 3; // Hipoxia (Verde/Mareado)
+    
+    // Si quieres ser muy preciso con tu lógica de colores de cara:
+    // face-1: Rojo (Fiebre), face-2: Azul (Hipotermia), face-3: Verde (SpO2 bajo)
+    if (valTemp > 37.5) colorFinal = 1;
+    else if (valTemp < 35.0) colorFinal = 2;
+    else if (valSpO2 < 90) colorFinal = 3;
+
+    // 2. Enviar evento al servidor para actualizar la cara
+    socket.emit('finalizar_chequeo', {
+        temp: valTemp,
+        spo2: valSpO2,
+        bpm: valBPM,
+        faceColor: colorFinal
+    });
 
     const resumenHTML = `
         <div style="background: #eef2f3; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
@@ -319,8 +346,8 @@ function finalizar() {
     nextStep(5);
 
     setTimeout(() => {
-        dibujarGrafico('chartBPM', 'BPM', historyBPM, dBPM.color);
-        dibujarGrafico('chartSpO2', 'SpO2 %', historySpO2, dSpO2.color);
+        dibujarGrafico('chartBPM', 'BPM', patient.historyBPM, dBPM.color);
+        dibujarGrafico('chartSpO2', 'SpO2 %', patient.historySpO2, dSpO2.color);
         // dibujarGrafico('chartTemp', 'Temp °C', historyTemp, dTemp.color); // Oculto
     }, 100);
 }
@@ -362,10 +389,10 @@ async function guardarEnBaseDeDatos() {
         height: patient.height,
         bmi: patient.bmi,
         heart_rate: patient.heart_rate,
+        history_bpm: patient.historyBPM,
         spo2: patient.spo2,
-        tempObject: patient.tempObject,
-        history_bpm: historyBPM, 
-        history_spo2: historySpO2
+        history_spo2: patient.historySpO2,
+        tempObject: patient.tempObject
     };
 
     try {

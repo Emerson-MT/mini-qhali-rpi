@@ -29,7 +29,6 @@ async function fetchPatients(searchTerm = "") {
     noData.style.display = "none";
 
     try {
-        // Llamada a TU API Python
         const response = await fetch(`/api/pacientes?page=${currentPage}&search=${encodeURIComponent(searchTerm)}`);
         const result = await response.json();
 
@@ -50,14 +49,38 @@ async function fetchPatients(searchTerm = "") {
 
                 row.style.cursor = "pointer"; 
                 row.onclick = () => {
-                    // Redirige a la nueva ruta usando el ID del paciente
                     window.location.href = `/monitoring/details/${p.id}`;
                 };
-                
-                // Formatear fecha (Ej: 14:11 pm - 12/01)
-                const dateObj = new Date(p.date_register); // Asegúrate que tu DB retorna formato ISO o compatible
-                const timeStr = dateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
-                const dateStr = dateObj.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+
+                let rawDate = p.date_register || ""; 
+                let fechaBonita = "--/--";
+                let horaBonita = "--:--";
+
+                // Analizamos el formato: "Sat, 24 Jan 2026 04:50:53 GMT"
+                if (rawDate.length > 10) {
+                    const partes = rawDate.split(" "); 
+                    // partes será: ["Sat,", "24", "Jan", "2026", "04:50:53", "GMT"]
+
+                    if (partes.length >= 5) {
+                        // 1. Extraer Día (Índice 1)
+                        let dia = partes[1]; 
+
+                        // 2. Extraer y Traducir Mes (Índice 2)
+                        const mapaMeses = {
+                            "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04", "May": "05", "Jun": "06",
+                            "Jul": "07", "Aug": "08", "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12"
+                        };
+                        let mesTexto = partes[2];
+                        let mes = mapaMeses[mesTexto] || "??";
+
+                        fechaBonita = `${dia}/${mes}`;
+
+                        // 3. Extraer Hora (Índice 4) -> "04:50:53"
+                        let horaFull = partes[4];
+                        // Quitamos los segundos (tomamos los primeros 5 caracteres)
+                        horaBonita = horaFull.substring(0, 5); 
+                    }
+                }
 
                 row.innerHTML = `
                     <td>${p.lastname}, ${p.name}</td>
@@ -65,8 +88,9 @@ async function fetchPatients(searchTerm = "") {
                     <td style="text-align: center;">
                         <span class="tag-sex sex-${p.sex_id}">${p.sex_id}</span>
                     </td>
-                    <td>${timeStr} <small style="color:#666">(${dateStr})</small></td>
+                    <td>${horaBonita} <small style="color:#666">(${fechaBonita})</small></td>
                 `;
+
                 tableBody.appendChild(row);
             });
 
