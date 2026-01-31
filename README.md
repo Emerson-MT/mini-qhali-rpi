@@ -14,15 +14,14 @@ El proyecto está organizado de manera modular para separar la lógica del servi
 │   │   ├── /face            # Interfaz de la Cara del Robot (Animaciones)
 │   │   ├── /mobile          # Interfaz de Recolección de Datos (Médico)
 │   │   └── /monitoring      # Dashboard de Historial y Detalles de Pacientes
-|   |       └── /details     # Información detallada del paciente seleccionado
 │   └── server.py            # Cerebro principal: Rutas, Socket.IO y Conexión a BD
 │
 ├── /src                     # LÓGICA DE SENSORES (Hardware)
 │   └── /health_system
-│       ├── vital_signs_reading.py  # Lee sensores físicos y guarda en JSON
-│       ├── send_data_http.py       # Lee el JSON y envía los datos a Flask (POST)
-│       ├── mqtt_subscriber.py      # (Opcional) Receptor de datos vía MQTT
-│       └── datos_medicos.json      # Archivo temporal de intercambio
+│       ├── vital_signs_reading.py       # Lee sensores físicos vía Serial (USB)
+│       ├── vital_signs_reading_mqtt.py  # (Opcional) Lee sensores vía WiFi/MQTT
+│       ├── send_data_http.py            # Puente HTTP para enviar datos a Flask
+│       └── datos_medicos.json           # Archivo temporal de intercambio
 │
 │── README.md
 ├── requirements.txt
@@ -97,25 +96,56 @@ Para apagar todos los procesos de forma segura, simplemente presiona `Ctrl + C` 
 
 ## 📡 Configuración Avanzada: Modo MQTT
 
-Por defecto, el sistema ejecuta `vital_signs_reading.py` para leer sensores directamente. Si deseas utilizar una arquitectura distribuida (ej. sensores en un ESP32 enviando a un broker MQTT), debes modificar el script de arranque.
+Por defecto, el sistema ejecuta `vital_signs_reading.py` para leer sensores directamente vía Serial/USB. Si deseas utilizar una arquitectura distribuida (ej. sensores en un ESP32 enviando datos a un broker MQTT vía WiFi), sigue estos pasos previos.
 
-**Requisito:** Tener un broker MQTT (como Mosquitto) instalado y corriendo.
+### 1. Instalar y Habilitar Mosquitto
+Si estás ejecutando el servidor en Linux o Raspberry Pi, necesitas instalar el broker MQTT y asegurarte de que esté activo:
 
-1. Abre el archivo `run_miniqhali.sh` con un editor de texto.
-2. Busca la sección de ejecución de sensores.
-3. Comenta la línea original y descomenta la línea de MQTT:
+```bash
+sudo apt update
+sudo apt install mosquitto mosquitto-clients -y
+sudo systemctl enable mosquitto
+sudo systemctl start mosquitto
+```
+
+### 2. Configurar el ESP32
+El microcontrolador necesita saber la dirección IP de este servidor para enviar los datos. Ambos dispositivos deben encontrarse conectados a la misma red.
+
+1.  **Obtener IP del Servidor:** En la terminal de este equipo, ejecuta:
+    ```bash
+    hostname -I
+    ```
+    *(Copia la primera dirección IP que aparezca, ej: `192.168.1.XX`)*.
+
+2.  **Actualizar Firmware:** Dirígete al repositorio donde se encuentra el código del ESP32.
+3.  **Editar Código:** Busca la variable `MQTT_SERVER` o `BROKER_IP` y pega la IP que obtuviste en el paso anterior.
+4.  **Cargar:** Sube el programa actualizado a tu placa ESP32.
+
+### 3. Configurar el Script de Arranque
+Finalmente, dile a MiniQhali que use el script de recepción MQTT en lugar de la lectura serial.
+
+1.  Abre el archivo `run_miniqhali.sh` con un editor de texto.
+2.  Busca la sección de ejecución de sensores.
+3.  Cambia la línea de la **Opción A** y por la línea de la **Opción B**:
 
 ```bash
 # --- DENTRO DE run_miniqhali.sh ---
 
-# OPCIÓN A: Lectura directa de sensores (Default)
-# python3 src/health_system/vital_signs_reading.py &  <-- COMENTAR ESTA
+# OPCIÓN A: Comunicación Serial (Default)
+# python3 src/health_system/vital_signs_reading.py &        <-- CAMBIAR ESTA
 
 # OPCIÓN B: Receptor MQTT (Usar si tienes Mosquitto corriendo)
-python3 src/health_system/mqtt_subscriber.py &        <-- DESCOMENTAR ESTA
+python3 src/health_system/vital_signs_reading_mqtt.py &     <-- POR ESTA
 ```
 
-4. Guarda el archivo y vuelve a ejecutar `./run_miniqhali.sh`. El sistema ahora escuchará los tópicos configurados en el suscriptor.
+4.  Guarda el archivo.
+
+### 4. Ejecutar el Sistema
+Reinicia el sistema con el script maestro. Ahora escuchará los datos que lleguen por la red:
+
+```bash
+./run_miniqhali.sh
+```
 
 ---
 
