@@ -13,7 +13,8 @@ El proyecto está organizado de manera modular para separar la lógica del servi
 │   ├── /public              # Archivos estáticos (HTML, CSS, JS)
 │   │   ├── /face            # Interfaz de la Cara del Robot (Animaciones)
 │   │   ├── /mobile          # Interfaz de Recolección de Datos (Médico)
-│   │   └── /monitoring      # Dashboard de Historial y Detalles de Pacientes
+│   │   └── /monitoring      # Dashboard de Historial e información general de Pacientes
+|   |      └── /details      # Detalles del paciente seleccionado en la página de monitoring
 │   └── server.py            # Cerebro principal: Rutas, Socket.IO y Conexión a BD
 │
 ├── /src                     # LÓGICA DE SENSORES (Hardware)
