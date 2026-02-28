@@ -111,21 +111,42 @@ body {
 }
 
 /* --- PASO 0: PANTALLA DE BIENVENIDA --- */
+
+/* ESTILO BASE (Celular): Ocupa el 100% */
 .intro-screen {
-    /* Gradiente azul oscuro como en tu imagen de referencia */
-    background: radial-gradient(circle at center, #005c97 0%, #061161 100%);
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100vh;
-    z-index: 2000; /* Para tapar la cabecera fija (z-index 1000) */
-    display: none; /* Flexbox para centrar todo */
+    z-index: 2000;
+    display: none; /* Se activa con .active */
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 20px;
+    justify-content: space-between;
+    padding: 60px 20px;
     text-align: center;
+
+    /* Imagen de fondo */
+    background-color: #061161; 
+    background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('assets/robot_face.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    transition: all 0.3s ease;
+}
+
+/* ESTILO PARA LAPTOP (Pantallas mayores a 768px) */
+@media (min-width: 768px) {
+    .intro-screen {
+        width: 450px;         /* Ancho fijo vertical tipo celular */
+        left: 50%;            /* Lo mueve al centro horizontal */
+        transform: translateX(-50%); /* Ajuste fino para centrado perfecto */
+        border-left: 1px solid rgba(255,255,255,0.1);
+        border-right: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 0 100px rgba(0,0,0,0.5); /* Sombra para que resalte sobre el fondo gris */
+    }
 }
 
 /* Solo se muestra si tiene la clase active (ya definido en tu CSS global, pero reforzamos display flex) */
@@ -139,25 +160,6 @@ body {
     color: white;
     margin-bottom: 30px;
     text-shadow: 0 4px 10px rgba(0,0,0,0.5);
-}
-
-.intro-image-container {
-    width: 400px;
-    height: 500px;
-    margin-bottom: 40px;
-    position: relative;
-    /* Efecto de resplandor detrás del robot */
-    box-shadow: 0 0 50px rgba(72, 145, 255, 0.4); 
-    border-radius: 50% 50% 40% 40%; /* Forma ovalada suave */
-    overflow: hidden;
-    background: transparent;
-}
-
-.intro-robot {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transform: scale(1.1); /* Zoom ligero para primer plano */
 }
 
 .btn-intro {

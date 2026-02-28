@@ -132,9 +132,9 @@ def recibir_telemetria():
 # --- CONFIGURACIÓN DE BASE DE DATOS ---
 db_config = {
     'host': 'sql10.freesqldatabase.com',
-    'user': 'sql10815178',       # Cambia esto por tu usuario de MySQL
-    'password': '5LNS15uY8G', # Cambia esto por tu contraseña de MySQL
-    'database': 'sql10815178'
+    'user': 'sql10817648',       # Cambia esto por tu usuario de MySQL
+    'password': 'Yj1ifFWCGE', # Cambia esto por tu contraseña de MySQL
+    'database': 'sql10817648'
 }
 
 # --- NUEVA RUTA API PARA GUARDAR ---

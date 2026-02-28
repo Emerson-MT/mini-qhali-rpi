@@ -13,7 +13,7 @@ sleep 3 # Esperamos unos segundos a que el servidor arranque bien
 
 # 2. Iniciamos la lectura de sensores
 echo "   -> Iniciando Sensores..."
-python3 src/health_system/vital_signs_reading_mqtt.py &
+python3 src/health_system/vital_signs_reading.py &
 
 # 3. Iniciamos el puente de datos
 echo "   -> Iniciando Transmisión HTTP..."
