@@ -1,0 +1,192 @@
+/* monitoring/style.css */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap');
+
+body {
+    background-color: #b0c4de; /* Color azulado de fondo como la imagen */
+    background-image: url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.2' fill-rule='evenodd'%3E%3Cpath d='M5 0h1v1H5zM0 5h1v1H0z'/%3E%3C/g%3E%3C/svg%3E");
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- HEADER --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 40px;
+    background: transparent;
+    border-bottom: 2px solid #5d7a96;
+    margin-bottom: 20px;
+}
+
+.logo-container h1 {
+    font-family: 'Playfair Display', serif; /* Fuente elegante del logo */
+    font-size: 3rem;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    background-color: #3b6e9e; /* Caja azul oscuro del logo */
+    padding: 5px 20px;
+    border-radius: 10px;
+    margin: 0;
+}
+
+.robot-info {
+    background-color: #dbe4eb;
+    padding: 8px 20px;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    font-weight: bold;
+    color: #00008b;
+}
+
+.time-display {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+/* --- CONTENEDOR PRINCIPAL --- */
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.4); /* Fondo blanco traslúcido */
+    padding: 30px;
+    border-radius: 20px;
+    position: relative;
+    min-height: 500px;
+}
+
+/* --- CONTROLES (Buscador y Paginación) --- */
+.controls-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.search-box {
+    position: relative;
+    width: 60%;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 15px 12px 40px;
+    border-radius: 25px;
+    border: 1px solid #aaa;
+    font-size: 1rem;
+    outline: none;
+    background: rgba(255,255,255,0.8);
+}
+
+.search-box i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.pagination-controls button {
+    background: #3b6e9e;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.pagination-controls button:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+}
+
+#pageIndicator {
+    font-weight: bold;
+    margin: 0 10px;
+    color: #00008b;
+}
+
+/* --- TABLA ESTILIZADA --- */
+table {
+    width: 100%;
+    border-collapse: separate; /* CLAVE para separar filas */
+    border-spacing: 0 15px;    /* Espacio vertical entre filas */
+}
+
+thead th {
+    text-align: left;
+    color: #00008b;
+    font-size: 1.3rem;
+    font-family: 'Playfair Display', serif;
+    padding-bottom: 5px;
+    padding-left: 15px;
+}
+
+tbody tr {
+    background-color: rgba(200, 200, 200, 0.5); /* Gris traslúcido */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+tbody tr:hover {
+    transform: scale(1.01);
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+tbody td {
+    padding: 15px;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+/* Bordes redondeados para la fila entera */
+tbody td:first-child {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    font-weight: 500;
+}
+
+tbody td:last-child {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+/* Etiquetas de Sexo */
+.tag-sex {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+.sex-M { background-color: #dbe4eb; color: #2c3e50; }
+.sex-F { background-color: #e8dff5; color: #5e3c58; }
+
+/* --- MENSAJES --- */
+.loading-msg, .no-data-msg {
+    text-align: center;
+    padding: 20px;
+    font-size: 1.2rem;
+    color: #555;
+}
+
+/* --- ROBOT DECORATIVO --- */
+.robot-decoration {
+    position: absolute;
+    right: -20px;
+    bottom: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.bubble {
+    background: #87ceeb;
+    padding: 10px 20px;
+    border-radius: 20px 20px 0 20px;
+    color: #000;
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+}

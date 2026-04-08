@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QhaliCare - Monitoreo</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <link rel="stylesheet" href="monitoring/style.css">
+    <script src="monitoring/script.js" defer></script>
+</head>
+<body>
+
+    <header class="top-bar">
+        <div class="logo-container">
+            <h1>QhaliCare</h1>
+        </div>
+        <div class="robot-info">
+            <span class="label">Unidad Robot:</span>
+            <span class="value">12Lim</span>
+        </div>
+        <div class="time-display" id="clock">
+            12:00:00 pm
+        </div>
+    </header>
+
+    <main class="container">
+        
+        <div class="controls-bar">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Buscar por Apellidos o Nombres...">
+            </div>
+            
+            <div class="pagination-controls">
+                <button id="btnPrev" onclick="changePage(-1)" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="pageIndicator">Pág 1</span>
+                <button id="btnNext" onclick="changePage(1)"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 45%;">Apellidos y Nombres:</th>
+                        <th style="width: 15%;">Edad:</th>
+                        <th style="width: 15%;">Sexo:</th>
+                        <th style="width: 25%;">Fecha/Hora:</th>
+                    </tr>
+                </thead>
+                <tbody id="patientsTableBody">
+                    </tbody>
+            </table>
+            <div id="loading" class="loading-msg">Cargando datos...</div>
+            <div id="noData" class="no-data-msg" style="display: none;">No se encontraron pacientes.</div>
+        </div>
+
+        <div class="robot-decoration">
+            <div class="bubble">Pacientes registrados hoy.</div>
+        </div>
+
+    </main>
+</body>
+</html>
