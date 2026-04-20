@@ -1,25 +1,45 @@
 #!/bin/bash
 
-# Función para matar todos los procesos cuando presiones Ctrl+C
-trap "kill 0" EXIT
+# --- 1. CONFIGURACIÓN DE RUTAS DINÁMICAS ---
+# Esta línea detecta dónde está el script y entra a esa carpeta
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_DIR"
 
-echo "🚀 Iniciando Sistema MiniQhali..."
+# Definimos las rutas relativas a la raíz del proyecto
+VENV_PATH="$HOME/venvs/miniqhali_venv/bin/activate"
+SERVER_PATH="src/web_interface/server.py"
 
-# 1. Iniciamos el Servidor Web (Flask) en segundo plano (&)
-echo "   -> Iniciando Interfaz Web..."
-python3 web_interface/server.py &
-PID_SERVER=$! # Guardamos el ID del proceso por si acaso
-sleep 3 # Esperamos unos segundos a que el servidor arranque bien
+echo "------------------------------------------------"
+echo "🤖 INICIANDO ECOSISTEMA MINIQHALI"
+echo "📍 Directorio: $PROJECT_DIR"
+echo "------------------------------------------------"
 
-# 2. Iniciamos la lectura de sensores
-echo "   -> Iniciando Sensores..."
-python3 src/health_system/vital_signs_reading_mqtt.py &
+# --- 2. INICIAR BACKEND (SERVER) ---
+echo "🌐 1/3 Lanzando Servidor Flask..."
+if [ -f "$VENV_PATH" ]; then
+    source "$VENV_PATH"
+else
+    echo "❌ Error: No se encontró el venv en $VENV_PATH"
+    exit 1
+fi
 
-# 3. Iniciamos el puente de datos
-echo "   -> Iniciando Transmisión HTTP..."
-python3 src/health_system/send_data_http.py &
+# Ejecutamos el servidor en segundo plano
+python3 "$SERVER_PATH" > server.log 2>&1 &
+SERVER_PID=$!
 
-echo "✅ Todo corriendo. Presiona Ctrl+C para detener todo."
+# Espera crucial para que el puerto 3000 esté listo antes de abrir la cara
+echo "⏳ Esperando a que el servidor levante..."
+sleep 5
 
-# Mantiene el script vivo esperando
-wait
+# --- 3. INICIAR INTERFAZ (CARA) ---
+echo "🖥️ 2/3 Lanzando Interfaz Visual..."
+bash scripts/start_face.sh
+
+# --- 4. INICIAR LÓGICA Y AUDIO (CEREBRO) ---
+echo "🎙️ 3/3 Iniciando Audio y Cerebro..."
+# Este script bloquea la terminal; cuando lo cierres con Ctrl+C, seguirá el trap
+bash scripts/start_robot.sh
+
+# --- 5. LIMPIEZA AL SALIR ---
+# Si cierras el proceso principal, matamos el servidor Flask para liberar el puerto
+trap "echo '🛑 Deteniendo servidor...'; kill $SERVER_PID" EXIT

@@ -1,0 +1,39 @@
+# --- SEGURIDAD Y LLAVES (CRÍTICO) ---
+.env
+*.env
+# Nunca subir archivos que contengan API Keys o secretos
+credentials.json
+
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# --- DATOS DEL PROYECTO ---
+# Archivo donde guardas las mediciones locales de MiniQhali
+datos_medicos.json
+# Logs de ejecución
+*.log
+
+# --- SISTEMA OPERATIVO ---
+.DS_Store
+Thumbs.db
+.directory
+
+# --- VS CODE / EDITORES ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- MODELOS PESADOS (Opcional) ---
+# Si el modelo de Vosk es muy pesado, es mejor no subirlo y descargarlo por separado
+# src/miniqhali_lib/models/vosk-model-*

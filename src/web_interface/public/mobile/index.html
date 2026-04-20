@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniQhali Móvil</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="stylesheet" href="mobile/style.css"> 
+    <script src="mobile/script.js" defer></script>
+</head>
+<body>
+
+    <header class="app-header">
+        <h1 class="logo-text">QhaliCare</h1> 
+    </header>
+
+    <div id="step-0" class="step active intro-screen">
+        <h1 class="intro-logo">QhaliCare</h1>
+        
+        <div class="intro-image-container">
+            <img src="mobile/assets/robot_face.jpeg" class="intro-robot" alt="MiniQhali Face">
+        </div>
+
+        <button onclick="nextStep(1)" class="btn-intro">Iniciar monitoreo</button>
+    </div>
+
+    <div id="step-1" class="step container-layout">
+        <div class="robot-speech-container">
+            <div class="speech-bubble">
+                <p>Hola, soy MQhali! Me indica sus datos por favor.</p>
+            </div>
+            <img src="mobile/assets/robot_intro.jpeg" class="robot-img-small" alt="Robot Saludando" onerror="this.style.display='none'">
+        </div>
+
+        <div class="form-card">
+            <h2 style="text-align: left; margin-bottom: 15px; font-size: 1.2rem; color: #333;">📝 Datos del Paciente</h2>
+            
+            <label class="input-label">Nombres</label>
+            <input type="text" id="p-name">
+            
+            <label class="input-label">Apellidos</label>
+            <input type="text" id="p-lastname">
+            
+            <div class="row-flex">
+                <div class="col-half">
+                    <label class="input-label">Edad</label>
+                    <input type="number" id="p-age">
+                </div>
+                <div class="col-half">
+                    <label class="input-label">Sexo</label>
+                    <select id="p-sex">
+                        <option value="" disabled selected>Elegir</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select>
+                </div>
+            </div>
+
+            <label class="input-label">Talla (cm)</label>
+            <input type="number" id="p-height">
+            
+            <label class="input-label">Peso (kg)</label>
+            <input type="number" id="p-weight">
+
+            <button onclick="nextStep(2)" class="btn-action">Comenzar Chequeo</button>
+            
+            <div class="progress-bar-container">
+                <div class="progress-fill" style="width: 0%"></div>
+                <span class="progress-text-overlay">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="step-2" class="step container-layout">
+        <div class="robot-scene">
+            <div class="speech-bubble">
+                <p>Ahora veamos cómo va tu corazón.</p>
+            </div>
+            <img src="mobile/assets/robot_bpm.jpeg" class="robot-main-img" alt="Robot Corazón" onerror="this.style.display='none'">
+        </div>
+
+        <div class="reading-panel">
+            <div class="icon-value-row">
+                <img src="mobile/assets/icon_heart.png" class="sensor-icon" alt="Icono Corazón" onerror="this.style.display='none'">
+                <div class="value-pill">
+                    <span id="val-bpm">--</span> <small>bpm</small>
+                </div>
+            </div>
+            
+            <div id="timer-bpm" class="status-text">Esperando sensor...</div>
+            
+            <button id="btn-bpm" onclick="nextStep(3)" disabled class="btn-action btn-disabled">Midiendo...</button>
+            
+            <div class="progress-bar-container big-bar">
+                <div class="progress-fill" style="width: 25%"></div>
+                <span class="progress-text-overlay">25%</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="step-3" class="step container-layout">
+        <div class="robot-scene">
+            <div class="speech-bubble">
+                <p>Empecemos por tu Saturación, ¿me das la mano?</p>
+            </div>
+            <img src="mobile/assets/robot_spo2.jpeg" class="robot-main-img" alt="Robot Mano" onerror="this.style.display='none'">
+        </div>
+
+        <div class="reading-panel">
+            <div class="icon-value-row">
+                <img src="mobile/assets/icon_spo2.png" class="sensor-icon" alt="Icono SpO2" onerror="this.style.display='none'">
+                <div class="value-pill">
+                    <span id="val-spo2">--</span> <small>%</small>
+                </div>
+            </div>
+
+            <div id="timer-spo2" class="status-text">Esperando sensor...</div>
+
+            <button id="btn-spo2" onclick="nextStep(4)" disabled class="btn-action btn-disabled">Midiendo...</button>
+
+            <div class="progress-bar-container big-bar">
+                <div class="progress-fill" style="width: 50%"></div>
+                <span class="progress-text-overlay">50%</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="step-4" class="step container-layout">
+        <div class="robot-scene">
+            <div class="speech-bubble">
+                <p>Veamos tu temperatura corporal, acerca tu frente por favor.</p>
+            </div>
+            <img src="mobile/assets/robot_temp.jpeg" class="robot-main-img" alt="Robot Frente" onerror="this.style.display='none'">
+        </div>
+
+        <div class="reading-panel">
+            <div class="icon-value-row">
+                <img src="mobile/assets/icon_temp.png" class="sensor-icon" alt="Icono Temp" onerror="this.style.display='none'">
+                <div class="value-pill">
+                    <span id="val-temp">--</span> <small>°C</small>
+                </div>
+            </div>
+
+            <div id="timer-temp" class="status-text">Esperando sensor...</div>
+
+            <button id="btn-temp" onclick="finalizar()" disabled class="btn-action btn-disabled">Midiendo...</button>
+
+            <div class="progress-bar-container big-bar">
+                <div class="progress-fill" style="width: 75%"></div>
+                <span class="progress-text-overlay">75%</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="step-5" class="step container-layout" style="padding-top: 20px;">
+        <h2>✅ Chequeo Completo</h2>
+        <div id="resumen-texto" style="text-align: left; margin-bottom: 20px;"></div>
+        
+        <div class="charts-area">
+            <h3>Historial Ritmo (BPM)</h3>
+            <div class="chart-container"><canvas id="chartBPM"></canvas></div>
+            
+            <h3>Historial Oxígeno (%)</h3>
+            <div class="chart-container"><canvas id="chartSpO2"></canvas></div>
+        </div>
+        
+        <button onclick="location.reload()" class="btn-action">Nuevo Paciente</button>
+    </div>
+
+</body>
+</html>
