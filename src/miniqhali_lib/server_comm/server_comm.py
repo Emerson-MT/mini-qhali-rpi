@@ -39,7 +39,7 @@ class ServerComm:
     def connect_socket(self):
         try:
             if not self.sio.connected:
-                self.sio.connect(self.base_url)
+                self.sio.connect(self.base_url, wait_timeout=10)
         except Exception as e:
             print(f"❌ Error Socket: {e}")
 
@@ -62,11 +62,11 @@ class ServerComm:
             if ts_actual is not None and ts_actual == self.ultimo_timestamp:
                 return False # Ya se envió este dato
 
-            print(f"📤 Enviando datos al servidor: {self.url_servidor}")
+            print(f"📤 Enviando datos al servidor: {self.url_telemetria}")
             
             # Tu server.py espera una lista: "datos_lista = request.get_json... or []"
             # Realizar la petición POST
-            respuesta = requests.post(self.url_servidor, json=datos, timeout=3)
+            respuesta = requests.post(self.url_telemetria, json=datos, timeout=3)
             
             if respuesta.status_code == 200:
                 print(f"✅ Respuesta del servidor: {respuesta.json()}")
@@ -87,7 +87,7 @@ class ServerComm:
         """
         try:
             # Se asume que una petición GET a la raíz o al endpoint indica estado
-            respuesta = requests.get(self.url_servidor.replace("/api/telemetria", ""), timeout=2)
+            respuesta = requests.get(self.base_url, timeout=2)
             return respuesta.status_code == 200
         except:
             return False
