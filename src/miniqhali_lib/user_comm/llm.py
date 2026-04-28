@@ -4,7 +4,7 @@ from google import genai
 from langsmith import wrappers
 
 class LargeLanguageModel:
-    def __init__(self, google_api_key, langsmith_api_key, model_name="gemini-2.0-flash", tools=None):
+    def __init__(self, google_api_key, langsmith_api_key, model_name="gemini-2.5-flash", tools=None):
         # Configuración de entorno para LangSmith
         os.environ["GOOGLE_API_KEY"] = google_api_key
         os.environ["LANGSMITH_API_KEY"] = langsmith_api_key
@@ -14,6 +14,7 @@ class LargeLanguageModel:
         # Inicialización del cliente con Wrapper
         client_genai = genai.Client()
         self.client = wrappers.wrap_gemini(client_genai)
+        #self.client = client_genai
         self.model_name = model_name
         
         # Herramientas pasadas como arreglo de funciones
@@ -34,7 +35,7 @@ class LargeLanguageModel:
         
         while file_uploaded.state.name == "PROCESSING":
             print("Esperando procesamiento de PDF...", end="\r", flush=True)
-            time.sleep(2)
+            time.sleep(20)
             file_uploaded = self.client.files.get(name=file_uploaded.name)
         
         if file_uploaded.state.name == "FAILED":

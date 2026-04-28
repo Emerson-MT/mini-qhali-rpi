@@ -6,7 +6,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 
 # Definimos las rutas relativas a la raíz del proyecto
-VENV_PATH="$HOME/venvs/miniqhali_venv/bin/activate"
+VENV_PATH="$HOME/venvs/mini-qhali_venv/bin/activate"
 SERVER_PATH="src/web_interface/server.py"
 
 echo "------------------------------------------------"

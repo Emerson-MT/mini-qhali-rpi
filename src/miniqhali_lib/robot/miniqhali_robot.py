@@ -4,12 +4,14 @@ import random
 import time
 from pathlib import Path
 
-from serial_comm import SerialConnection
-from server_comm import ServerComm
-from user_comm import LargeLanguageModel, SpeechToText, TextToSpeech
+from miniqhali_lib.serial_comm.serial_comm import SerialConnection
+from miniqhali_lib.server_comm.server_comm import ServerComm
+from miniqhali_lib.user_comm.llm import LargeLanguageModel
+from miniqhali_lib.user_comm.stt import SpeechToText
+from miniqhali_lib.user_comm.tts import TextToSpeech
 
 class MiniQhaliRobot:
-    def __init__(self, google_api_key, vosk_model_path, device_name, pdf_path, poses_path):
+    def __init__(self, google_api_key, langsmith_api_key, vosk_model_path, device_name, pdf_path, poses_path):
         # 1. Configuración de Rutas y Archivos
         self.base_dir = Path(__file__).resolve().parent.parent
         self.json_file = self.base_dir / "datos_medicos.json"
@@ -25,7 +27,7 @@ class MiniQhaliRobot:
         self.serial = SerialConnection(port='/dev/ttyUSB0', baud_rate=115200)
         
         # Configuración de conexión con servidor
-        self.server = ServerComm(url_servidor="http://localhost:3000")
+        self.server = ServerComm(base_url="http://localhost:3000")
         # Definimos qué canales escuchar
         my_channels = ['cambiar_modo_sensores', 'reset_face', 'finalizar_chequeo']
         self.server.setup_sockets(my_channels)
@@ -46,7 +48,7 @@ class MiniQhaliRobot:
         my_tools = [
             self.execute_pose
         ]
-        self.brain = LargeLanguageModel(google_api_key=google_api_key, tools=my_tools)
+        self.brain = LargeLanguageModel(google_api_key=google_api_key, langsmith_api_key=langsmith_api_key, tools=my_tools)
         self.brain.upload_pdf(pdf_path)
     
 

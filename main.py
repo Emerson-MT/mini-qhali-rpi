@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent
 SRC_PATH = BASE_DIR / "src"
 sys.path.append(str(SRC_PATH))
 
-from miniqhali_robot import MiniQhaliRobot
+from miniqhali_lib import MiniQhaliRobot
 
 # --- Configuración de Parámetros ---
 

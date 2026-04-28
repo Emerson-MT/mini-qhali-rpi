@@ -1,6 +1,6 @@
 #!/bin/bash
 MAC_ADDR="F5:4E:FD:30:F8:61"
-VENV_PATH="$HOME/venvs/miniqhali_venv/bin/activate"
+VENV_PATH="$HOME/venvs/mini-qhali_venv/bin/activate"
 PYTHON_MAIN="main.py"
 
 echo "🔗 Conectando al parlante Tronsmart..."
