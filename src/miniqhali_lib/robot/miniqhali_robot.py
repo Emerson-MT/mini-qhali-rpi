@@ -11,7 +11,7 @@ from miniqhali_lib.user_comm.stt import SpeechToText
 from miniqhali_lib.user_comm.tts import TextToSpeech
 
 class MiniQhaliRobot:
-    def __init__(self, google_api_key, langsmith_api_key, vosk_model_path, device_name, pdf_path, poses_path):
+    def __init__(self, vosk_model_path, device_name, pdf_path, poses_path, ollama_model=None, ollama_host=None):
         # 1. Configuración de Rutas y Archivos
         self.base_dir = Path(__file__).resolve().parent.parent
         self.json_file = self.base_dir / "datos_medicos.json"
@@ -44,11 +44,8 @@ class MiniQhaliRobot:
         # Configuración de Text to Speech
         self.tts = TextToSpeech(volume_boost="1.0")
         
-        # 3. Configuración del Cerebro (LLM) con sus Tools
-        my_tools = [
-            self.execute_pose
-        ]
-        self.brain = LargeLanguageModel(google_api_key=google_api_key, langsmith_api_key=langsmith_api_key, tools=my_tools)
+        # 3. Configuración del Cerebro (LLM) local con Ollama
+        self.brain = LargeLanguageModel(model_name=ollama_model, ollama_host=ollama_host)
         self.brain.upload_pdf(pdf_path)
     
 
@@ -200,50 +197,19 @@ class MiniQhaliRobot:
                 # Dentro del run()
                 estado_actual_texto = f"Contexto actual: El robot {'ESTÁ' if self.is_measuring else 'NO está'} midiendo signos vitales ahora mismo."
 
-                # PROMPT DE INTEGRACIÓN: Guía por PDF + Pensamiento Motor
-                prompt_contents = [
-                    self.brain.pdf_context, # Contexto principal del PDF
-                    estado_actual_texto,
-                    f"""
-                    Eres MiniQhali, una robot enfermera de la PUCP que ayuda a pacientes con sus signos vitales.
-                    
-                    INSTRUCCIÓN DE PENSAMIENTO MOTOR:
-                    Antes de responder, sigue este proceso mental interno:
-                    1. Determina la respuesta basándote en el input: '{user_input}' y el protocolo del PDF. Esta respuesta debe basarse
-                    siempre primero en el protocolo del PDF y, de no encontrar respuesta ahí, puedes responder buscando en internet.
-                    2. Siempre debes analizar el contenido de lo que dices para elegir el tipo de movimiento a ejecutar mientras hablas:
-                       - Informativo/Guía -> tipo_pose='explicacion'.
-                       - Éxito/Resultado/Cierre -> tipo_pose='feedback'.
-                    3. Siempre que el robot no esté midiendo signos vitales, debes ejecutar el tool 'execute_pose' con el tipo_pose 
-                    que hayas elegido previamente.
-                    
-                    FORMATO DE RESPUESTA OBLIGATORIO (Orden estricto):
-                    - Parte 1: Llamada a 'execute_pose' con tipo_pose como parámetro.
-                    - Parte 2: Texto de respuesta para el usuario.
-    
-                    """
-                ]
-
-                # Generamos la respuesta usando el método del LLM que configuramos
-                response = self.brain.client.models.generate_content(
-                    model=self.brain.model_name,
-                    contents=prompt_contents,
-                    config={"tools": self.brain.tools}
-                )
-
-                if not response.candidates or not response.candidates[0].content.parts:
-                    continue
+                try:
+                    reply = self.brain.generate_robot_reply(user_input, estado_actual_texto)
+                except Exception as e:
+                    print(f"⚠️ Error consultando Ollama: {e}")
+                    reply = {
+                        "tipo_pose": "explicacion",
+                        "respuesta": "Perdon, mi modulo de inteligencia local no respondio correctamente.",
+                    }
 
                 # --- 3. EJECUCIÓN DE PARTES (Secuencia de Hardware) ---
-                for part in response.candidates[0].content.parts:
-                    if part.function_call:
-                        fn = part.function_call
-                        if fn.name == "execute_pose":
-                            # Ejecuta el movimiento físico inmediatamente
-                            self.execute_pose(**fn.args)
-                    elif part.text:
-                        # El texto se habla al final para que el robot ya esté en la pose correcta
-                        self.tts.speak(part.text)
+                if not self.is_measuring:
+                    self.execute_pose(reply["tipo_pose"])
+                self.tts.speak(reply["respuesta"])
 
         except KeyboardInterrupt:
             self.serial.disconnect()

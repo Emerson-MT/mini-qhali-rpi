@@ -16,9 +16,8 @@ from miniqhali_lib import MiniQhaliRobot
 # Carga el archivo .env
 load_dotenv()
 
-# Busca la variable. Si no existe, GOOGLE_API_KEY será None
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "hf.co/LiquidAI/LFM2.5-350M-GGUF:Q4_K_M")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
 # Rutas relativas a la carpeta del proyecto
 VOSK_MODEL_PATH = SRC_PATH / "miniqhali_lib/models/vosk-model-small-es-0.42" 
@@ -27,11 +26,6 @@ POSES_PATH = SRC_PATH / "miniqhali_lib/files/poses.json"
 
 def main():
     print("--- 🤖 Iniciando Sistema de Control MiniQhali ---")
-    
-    # Validación de seguridad: API Key y Archivos
-    if not GOOGLE_API_KEY:
-        print("❌ Error: No se encontró GOOGLE_API_KEY en el archivo .env")
-        return
     
     archivos_criticos = [VOSK_MODEL_PATH, PDF_PATH, POSES_PATH]
     for ruta in archivos_criticos:
@@ -43,12 +37,12 @@ def main():
     # Aquí se disparan los hilos de Socket.IO, Serial y carga de PDF
     try:
         robot = MiniQhaliRobot(
-            google_api_key=GOOGLE_API_KEY, 
-            langsmith_api_key=LANGSMITH_API_KEY,
             vosk_model_path=str(VOSK_MODEL_PATH),
             device_name="ReSpeaker", # Revisa que el nombre coincida en tu SO
             pdf_path=str(PDF_PATH),
-            poses_path=str(POSES_PATH)
+            poses_path=str(POSES_PATH),
+            ollama_model=OLLAMA_MODEL,
+            ollama_host=OLLAMA_HOST,
         )
 
         print("✅ MiniQhali inicializada y conectada al Servidor.")
