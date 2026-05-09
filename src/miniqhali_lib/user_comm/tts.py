@@ -24,16 +24,16 @@ class TextToSpeech:
         """
         self.backend = backend or os.getenv("TTS_BACKEND", "espeak")
         self.voice = voice or os.getenv("ESPEAK_VOICE", "es-la+f4")
-        self.rate = rate or os.getenv("ESPEAK_SPEED", "128")
-        self.espeak_pitch = os.getenv("ESPEAK_PITCH", "82")
+        self.rate = rate or os.getenv("ESPEAK_SPEED", "145")
+        self.espeak_pitch = os.getenv("ESPEAK_PITCH", "95")
         self.espeak_amp = os.getenv("ESPEAK_AMP", "145")
         self.espeak_gap = os.getenv("ESPEAK_GAP", "4")
         self.sample_rate = os.getenv("TTS_SAMPLE_RATE", "22050")
         self.cache_enabled = os.getenv("TTS_CACHE_ENABLED", "true").lower() == "true"
         self.cache_dir = os.getenv("TTS_CACHE_DIR", "/tmp/miniqhali/cache/tts")
         self.sox_enabled = os.getenv("TTS_SOX_ENABLED", "true").lower() == "true"
-        self.sox_pitch_cents = os.getenv("TTS_SOX_PITCH_CENTS", "350")
-        self.sox_tempo = os.getenv("TTS_SOX_TEMPO", "0.94")
+        self.sox_pitch_cents = os.getenv("TTS_SOX_PITCH_CENTS", "650")
+        self.sox_tempo = os.getenv("TTS_SOX_TEMPO", "1.30")
         self.piper_model = piper_model or os.getenv(
             "PIPER_MODEL",
             os.path.expanduser("~/models/piper/es_ES-davefx-medium/es_ES-davefx-medium.onnx"),
