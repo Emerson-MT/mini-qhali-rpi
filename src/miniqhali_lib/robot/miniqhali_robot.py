@@ -11,7 +11,7 @@ from miniqhali_lib.user_comm.stt import SpeechToText
 from miniqhali_lib.user_comm.tts import TextToSpeech
 
 class MiniQhaliRobot:
-    def __init__(self, vosk_model_path, device_name, pdf_path, poses_path, ollama_model=None, ollama_host=None):
+    def __init__(self, vosk_model_path, device_name, pdf_path, poses_path, ollama_model=None, ollama_host=None, llm_provider=None):
         # 1. Configuración de Rutas y Archivos
         self.base_dir = Path(__file__).resolve().parent.parent
         self.json_file = self.base_dir / "datos_medicos.json"
@@ -44,8 +44,8 @@ class MiniQhaliRobot:
         # Configuración de Text to Speech
         self.tts = TextToSpeech(volume_boost="1.0")
         
-        # 3. Configuración del Cerebro (LLM) local con Ollama
-        self.brain = LargeLanguageModel(model_name=ollama_model, ollama_host=ollama_host)
+        # 3. Configuración del Cerebro (LLM) local
+        self.brain = LargeLanguageModel(model_name=ollama_model, ollama_host=ollama_host, provider=llm_provider)
         self.brain.upload_pdf(pdf_path)
     
 
@@ -200,7 +200,7 @@ class MiniQhaliRobot:
                 try:
                     reply = self.brain.generate_robot_reply(user_input, estado_actual_texto)
                 except Exception as e:
-                    print(f"⚠️ Error consultando Ollama: {e}")
+                    print(f"⚠️ Error consultando LLM local: {e}")
                     reply = {
                         "tipo_pose": "explicacion",
                         "respuesta": "Perdon, mi modulo de inteligencia local no respondio correctamente.",

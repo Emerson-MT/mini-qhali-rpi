@@ -18,6 +18,7 @@ load_dotenv()
 
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "hf.co/LiquidAI/LFM2.5-350M-GGUF:Q4_K_M")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "llama_cpp")
 
 # Rutas relativas a la carpeta del proyecto
 VOSK_MODEL_PATH = SRC_PATH / "miniqhali_lib/models/vosk-model-small-es-0.42" 
@@ -43,6 +44,7 @@ def main():
             poses_path=str(POSES_PATH),
             ollama_model=OLLAMA_MODEL,
             ollama_host=OLLAMA_HOST,
+            llm_provider=LLM_PROVIDER,
         )
 
         print("✅ MiniQhali inicializada y conectada al Servidor.")
