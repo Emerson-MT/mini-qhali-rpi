@@ -21,30 +21,28 @@ async function fetchPatientDetails(id) {
             const p = result.data;
             
             // 1. Llenar Textos (Igual que antes)
-            const dateObj = new Date(p.date_register);
-            const timeStr = dateObj.toLocaleTimeString('es-PE', {hour: '2-digit', minute:'2-digit', hour12:true});
+            const dateObj = p.date_register ? new Date(p.date_register) : new Date();
+            const timeStr = isNaN(dateObj) ? "--:--" : dateObj.toLocaleTimeString('es-PE', {hour: '2-digit', minute:'2-digit', hour12:true});
 
             document.getElementById('d-name').innerText = `${p.lastname}, ${p.name}`;
             document.getElementById('d-age').innerText = p.age;
             document.getElementById('d-sex').innerText = p.sex_id;
             document.getElementById('d-time').innerText = timeStr;
-            document.getElementById('d-val-temp').innerText = p.tempObject + "°C";
+            document.getElementById('d-val-temp').innerText = (p.temp_object || "0") + "°C";
             document.getElementById('d-val-spo2').innerText = p.spo2 + "%";
             document.getElementById('d-val-bpm').innerText = p.heart_rate + " bpm";
 
             // 2. Generar Notas (Igual que antes)
             const notesList = document.getElementById('d-notes');
             notesList.innerHTML = "";
-            if(p.tempObject > 37.5) notesList.innerHTML += "<li> Temperatura corporal elevada.</li>";
+            if(p.temp_object > 37.5) notesList.innerHTML += "<li> Temperatura corporal elevada.</li>";
             if(p.spo2 < 95) notesList.innerHTML += "<li> Saturación de oxígeno baja.</li>";
             if(p.heart_rate > 100) notesList.innerHTML += "<li> Frecuencia cardiaca elevada.</li>";
             if(notesList.innerHTML === "") notesList.innerHTML = "<li> Valores dentro de rangos normales.</li>";
 
             // 3. PROCESAR DATOS DE GRÁFICOS (NUEVO)
-            // Convertimos el texto de la DB a Arreglo real.
-            // Si viene null o vacío, usamos "[]" para evitar errores.
-            const arrayBPM = JSON.parse(p.history_bpm || "[]");
-            const arraySpO2 = JSON.parse(p.history_spo2 || "[]");
+            const arrayBPM = p.history_bpm || [];
+            const arraySpO2 = p.history_spo2 || [];
 
             // Dibujar los gráficos
             renderMedicalChart('chartBPM', 'BPM', arrayBPM, '#32CD32'); // Verde Lima

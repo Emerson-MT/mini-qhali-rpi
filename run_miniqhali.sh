@@ -1,21 +1,44 @@
 #!/bin/bash
 
-# --- 1. CONFIGURACIÓN DE RUTAS DINÁMICAS ---
-# Esta línea detecta dónde está el script y entra a esa carpeta
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_DIR"
 
-# Definimos las rutas relativas a la raíz del proyecto
 VENV_PATH="$HOME/venvs/miniqhali_venv/bin/activate"
 SERVER_PATH="src/web_interface/server.py"
 
+# --- 1. FUNCIÓN DE LIMPIEZA ROBUSTA ---
+cleanup() {
+    echo -e "\n🛑 Deteniendo ecosistema MiniQhali..."
+    
+    # Matar el grupo de procesos para no dejar hijos huérfanos
+    if [ ! -z "$SERVER_PID" ]; then
+        kill -TERM $SERVER_PID 2>/dev/null
+    fi
+    
+    # Limpieza forzosa de procesos por nombre
+    pkill -f "$SERVER_PATH"
+    pkill -f "main.py"
+    
+    # LIBERACIÓN DE PUERTO (El salvavidas de la Raspberry Pi)
+    # Mata cualquier proceso que siga usando el puerto 3000
+    fuser -k 3000/tcp 2>/dev/null
+    
+    echo "✅ Ecosistema cerrado correctamente."
+    exit
+}
+
+# Trap al inicio (captura Ctrl+C, cierre de terminal y errores)
+trap cleanup SIGINT SIGTERM EXIT
+
 echo "------------------------------------------------"
 echo "🤖 INICIANDO ECOSISTEMA MINIQHALI"
-echo "📍 Directorio: $PROJECT_DIR"
 echo "------------------------------------------------"
 
-# --- 2. INICIAR BACKEND (SERVER) ---
-echo "🌐 1/3 Lanzando Servidor Flask..."
+# --- 2. LIMPIEZA PREVENTIVA ---
+# Nos aseguramos de que el puerto esté libre antes de empezar
+fuser -k 3000/tcp 2>/dev/null
+
+# --- 3. INICIAR BACKEND ---
 if [ -f "$VENV_PATH" ]; then
     source "$VENV_PATH"
 else
@@ -23,23 +46,20 @@ else
     exit 1
 fi
 
-# Ejecutamos el servidor en segundo plano
-python3 "$SERVER_PATH" > server.log 2>&1 &
+# Ejecutamos con 'unbuffered' para que los logs salgan en tiempo real
+python3 -u "$SERVER_PATH" > server.log 2>&1 &
 SERVER_PID=$!
+echo "🌐 1/3 Servidor Flask en PID: $SERVER_PID"
 
-# Espera crucial para que el puerto 3000 esté listo antes de abrir la cara
-echo "⏳ Esperando a que el servidor levante..."
 sleep 5
 
-# --- 3. INICIAR INTERFAZ (CARA) ---
+# --- 4. INICIAR INTERFAZ ---
 echo "🖥️ 2/3 Lanzando Interfaz Visual..."
-bash scripts/start_face.sh
+# Usamos & para que no bloquee la ejecución
+bash scripts/start_face.sh & 
 
-# --- 4. INICIAR LÓGICA Y AUDIO (CEREBRO) ---
+# --- 5. INICIAR LÓGICA Y AUDIO ---
 echo "🎙️ 3/3 Iniciando Audio y Cerebro..."
-# Este script bloquea la terminal; cuando lo cierres con Ctrl+C, seguirá el trap
+# Al ser el último proceso, NO usamos &, así el script se queda "viviendo" aquí
+# y cualquier Ctrl+C activará el trap de arriba.
 bash scripts/start_robot.sh
-
-# --- 5. LIMPIEZA AL SALIR ---
-# Si cierras el proceso principal, matamos el servidor Flask para liberar el puerto
-trap "echo '🛑 Deteniendo servidor...'; kill $SERVER_PID" EXIT

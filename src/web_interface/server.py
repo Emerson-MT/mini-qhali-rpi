@@ -2,7 +2,8 @@
 from flask import Flask, send_from_directory, render_template, request, jsonify
 from flask_socketio import SocketIO
 from pathlib import Path
-import mysql.connector
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import json
 from datetime import datetime
 import pytz
@@ -21,6 +22,15 @@ last_sensor_data = {
     "tempObject": 0,
     "spo2": 0,
     "heartRate": 0
+}
+
+# --- CONFIGURACIÓN PARA POSTGRESQL (RASPBERRY PI 5) ---
+db_config = {
+    'host': 'localhost',         # Al estar en la misma Pi, usa localhost
+    'user': 'admin',       # El usuario que creamos
+    'password': 'admin', 
+    'database': 'miniqhali_db',
+    'port': '5432'
 }
 
 # --- Ruta principal ---
@@ -129,14 +139,6 @@ def recibir_telemetria():
 
     return jsonify({"status": "ok", "face": faceFlag})
 
-# --- CONFIGURACIÓN DE BASE DE DATOS ---
-db_config = {
-    'host': 'sql10.freesqldatabase.com',
-    'user': 'sql10815178',       # Cambia esto por tu usuario de MySQL
-    'password': '5LNS15uY8G', # Cambia esto por tu contraseña de MySQL
-    'database': 'sql10815178'
-}
-
 # --- NUEVA RUTA API PARA GUARDAR ---
 @app.route('/api/guardar_paciente', methods=['POST'])
 def guardar_paciente():
@@ -147,19 +149,20 @@ def guardar_paciente():
         zona_lima = pytz.timezone('America/Lima')
         fecha_lima = datetime.now(zona_lima).strftime('%Y-%m-%d %H:%M:%S')
         
-        # Conexión a la BD
-        conn = mysql.connector.connect(**db_config)
+        # CAMBIO: Conexión con psycopg2
+        conn = psycopg2.connect(**db_config)
         cursor = conn.cursor()
 
         # Si el frontend envía [70, 72, 75], esto lo convierte a "[70, 72, 75]"
         bpm_json = json.dumps(data.get('history_bpm', []))
         spo2_json = json.dumps(data.get('history_spo2', []))
 
-        # Query SQL
+        # Agregamos RETURNING id para obtener el ID autogenerado
         sql = """
             INSERT INTO patients 
-            (name, lastname, age, sex_id, weight, height, bmi, heart_rate, history_bpm, spo2, history_spo2, tempObject, date_register)
+            (name, lastname, age, sex_id, weight, height, bmi, heart_rate, history_bpm, spo2, history_spo2, temp_object, date_register)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         """
         
         valores = (
@@ -179,38 +182,33 @@ def guardar_paciente():
         )
         
         cursor.execute(sql, valores)
-        conn.commit() # Importante para guardar cambios
-        new_id = cursor.lastrowid
+        new_id = cursor.fetchone()[0] # CAMBIO: Así obtenemos el ID en Postgres
         
+        conn.commit()
         cursor.close()
         conn.close()
         
         return jsonify({"status": "success", "id": new_id, "message": "Paciente registrado"}), 200
 
-    except mysql.connector.Error as err:
-        print(f"Error SQL: {err}")
-        return jsonify({"status": "error", "message": str(err)}), 500
-    except Exception as e:
-        print(f"Error General: {e}")
+    except Exception as e: # Captura general para psycopg2
+        print(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/api/pacientes", methods=["GET"])
+@app.route("/api/pacientes", methods=["GET"]) # Ruta limpia para la lista
 def obtener_pacientes():
     try:
-        # 1. Obtener parámetros de la URL (Query Params)
         page = request.args.get('page', 1, type=int)
         search = request.args.get('search', '', type=str)
-        limit = 5  # Cantidad de pacientes por página (como en tu imagen)
+        limit = 5
         offset = (page - 1) * limit
 
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True) # dictionary=True es CLAVE para JSON
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-        # 2. Construir la Query Dinámica (Búsqueda + Paginación)
         query = """
             SELECT id, name, lastname, age, sex_id, date_register 
             FROM patients 
-            WHERE name LIKE %s OR lastname LIKE %s 
+            WHERE name ILIKE %s OR lastname ILIKE %s 
             ORDER BY date_register DESC 
             LIMIT %s OFFSET %s
         """
@@ -218,36 +216,31 @@ def obtener_pacientes():
         cursor.execute(query, (search_pattern, search_pattern, limit, offset))
         pacientes = cursor.fetchall()
 
-        # 3. Obtener el total de registros (para saber cuántas páginas hay)
-        count_query = "SELECT COUNT(*) as total FROM patients WHERE name LIKE %s OR lastname LIKE %s"
+        count_query = "SELECT COUNT(*) as total FROM patients WHERE name ILIKE %s OR lastname ILIKE %s"
         cursor.execute(count_query, (search_pattern, search_pattern))
         total_records = cursor.fetchone()['total']
         
         cursor.close()
         conn.close()
 
-        # 4. Responder JSON
         return jsonify({
             "status": "success",
             "data": pacientes,
             "page": page,
-            "limit": limit,
             "total_records": total_records,
             "total_pages": (total_records + limit - 1) // limit
         })
-
     except Exception as e:
-        print(f"Error API Pacientes: {e}")
+        print(f"Error en Lista: {e}") # Importante ver el error en la consola de la Pi
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # 2. API para obtener un paciente específico (Backend)
 @app.route("/api/pacientes/<int:id>", methods=["GET"])
 def obtener_paciente_id(id):
     try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Query para buscar por ID
         query = "SELECT * FROM patients WHERE id = %s"
         cursor.execute(query, (id,))
         paciente = cursor.fetchone()
@@ -261,6 +254,7 @@ def obtener_paciente_id(id):
             return jsonify({"status": "error", "message": "Paciente no encontrado"}), 404
 
     except Exception as e:
+        print(f"Error en ID: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
 # --- Eventos Socket.IO ---

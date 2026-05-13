@@ -110,14 +110,14 @@ class SpeechToText:
                     continue
 
         except KeyboardInterrupt:
-            print("\n🔴 Escucha cancelada por el usuario.")
-            return None
+            # No retornamos texto, lanzamos la excepción hacia arriba (al Robot)
+            raise 
         except Exception as e:
-            print(f"❌ Error durante el streaming de audio: {e}")
+            print(f"❌ Error en audio: {e}")
             return None
         finally:
-            # Limpieza obligatoria de recursos para no bloquear la tarjeta de sonido
-            if 'stream' in locals() and stream.is_active():
+            # Limpieza profunda
+            if stream:
                 stream.stop_stream()
                 stream.close()
             p.terminate()

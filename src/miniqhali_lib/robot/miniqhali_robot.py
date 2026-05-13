@@ -246,6 +246,9 @@ class MiniQhaliRobot:
                         self.tts.speak(part.text)
 
         except KeyboardInterrupt:
+            print("\n🛑 Deteniendo hardware y conexiones...")
             self.serial.disconnect()
-            self.server.sio.disconnect()
-            print("\n🛑 Programa finalizado por el usuario.")
+            if hasattr(self.server, 'sio'):
+                self.server.sio.disconnect()
+            # Forzar la salida para evitar que hilos secundarios mantengan vivo el proceso
+            os._exit(0)

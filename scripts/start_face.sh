@@ -1,18 +1,23 @@
 #!/bin/bash
-# 1. Configuración de entorno para entorno gráfico
+# 1. Ubicación de la llave que ya encontramos
+# Sincronizamos la autoridad
+# 1. Variables de entorno con la llave que ya conocemos
 export DISPLAY=:0
 export XAUTHORITY=/home/ubuntu/.Xauthority
 
-# 2. Limpieza total de procesos y bloqueos previos
-echo "🔄 Limpiando instancias de Chromium..."
+# 2. Asegurar que la cookie esté registrada
+# (Esto evita el error de MIT-MAGIC-COOKIE-1 si el archivo se borra)
+xauth add ubuntu-desktop/unix:0 MIT-MAGIC-COOKIE-1 a079edf5b8e74edbd0382111452e2f3f
+
+# 3. Desbloquear el acceso al display
+xhost +local:ubuntu > /dev/null 2>&1
+
+# 4. Limpieza de procesos
 pkill -f chromium
 sleep 1
+rm -rf /tmp/chromium_kiosk
 
-# Eliminar archivos de bloqueo que impiden que Chromium abra si hubo un crash
-rm -rf ~/.config/chromium/Singleton*
-rm -rf /tmp/chromium_kiosk/Singleton*
-
-echo "🚀 Abriendo cara del robot en modo Kiosco..."
+echo "🚀 Lanzando rostro en Waveshare 3.5..."
 # 3. Lanzamiento de Chromium con todas las optimizaciones
 /snap/bin/chromium \
   --kiosk \
