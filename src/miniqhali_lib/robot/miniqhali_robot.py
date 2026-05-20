@@ -51,33 +51,41 @@ class MiniQhaliRobot:
         self.brain = LargeLanguageModel(google_api_key=google_api_key, langsmith_api_key=langsmith_api_key, tools=my_tools)
         self.brain.upload_pdf(pdf_path)
     
+        self.last_print_measuring = 0
+        self.last_print_idle = 0
 
-    def manejar_modo(self, data):
-        # 1. Extraemos los datos del evento
+        # --- AGREGAR ESTO AL FINAL DEL __init__ ---
+        import threading
+        self.sensor_thread = threading.Thread(target=self._bucle_sensores_fondo, daemon=True)
+        self.sensor_thread.start()
+        print("🧵 Hilo secundario de sensores iniciado en segundo plano.")
+
+    def manejar_modo(self, data=None):
+        if data is None:
+            data = {}
+
         nuevo_estado = data.get('activo', False)
         nuevo_tipo = data.get('tipo', 'data')
 
-        # 2. Actualizamos la memoria interna del robot
         self.is_measuring = nuevo_estado
         self.measuring_state = nuevo_tipo
 
         print(f"📡 [Socket] Modo: {'ACTIVADO' if self.is_measuring else 'DESACTIVADO'} | Tipo: {self.measuring_state}")
 
-        # 3. Lógica de reacción inmediata (HRI)
+        # Lógica de reacción inmediata (HRI)
         if self.is_measuring:
             if self.measuring_state == 'bpm':
-                self.tts.speak("Por favor, coloca tu dedo en el sensor de pulso.")
+                # CAMBIADO: speak_async evita congelar el hilo de control
+                self.speak_async("Por favor, coloca tu dedo en el sensor de pulso.")
                 self.execute_pose("medicion_atenta")
             elif self.measuring_state == 'spo2':
-                self.tts.speak("Por favor coloca tu dedo en mi mano para medir el oxígeno")
+                self.speak_async("Por favor coloca tu dedo en mi mano para medir el oxígeno")
             elif self.measuring_state == 'temp':
-                self.tts.speak("Acércate al sensor de temperatura por favor.")
+                self.speak_async("Acércate al sensor de temperatura por favor.")
         else:
-            # Si acabamos de terminar una medición (is_measuring pasó a False)
-            # El robot puede dar un feedback de "descanso"
             self.execute_pose("explicacion") 
-            if self.measuring_state != 'data': # Evitamos que hable en el primer paso de datos
-                self.tts.speak(f"He terminado de capturar los datos de {self.measuring_state}. ¡Muy bien!")
+            if self.measuring_state != 'data': 
+                self.speak_async(f"He terminado de capturar los datos de {self.measuring_state}. ¡Muy bien!")
 
     def reiniciar_robot(self, data):
         print("Robot reiniciando posición...")
@@ -97,18 +105,19 @@ class MiniQhaliRobot:
 
     def read_sensors(self):
         """Lee el puerto serial y guarda en el archivo JSON local."""
-        if self.serial.connection and self.serial.connection.in_waiting > 0:
-            try:
-                linea = self.serial.connection.readline().decode('utf-8', errors='ignore').strip()
-                if linea.startswith('{') and linea.endswith('}'):
-                    dato_json = json.loads(linea)
-                    print(f"📥 Dato recibido del ESP32: {dato_json}")
-                    self._save_in_json(dato_json)
-                    return dato_json
-                elif linea:
-                    print(f"[ESP32 LOG]: {linea}")
-            except Exception as e:
-                print(f"⚠️ Error sincronizando serial: {e}")
+        try:
+            if self.serial.connection and self.serial.connection.is_open:
+                if self.serial.connection.in_waiting > 0:
+                    linea = self.serial.connection.readline().decode('utf-8', errors='ignore').strip()
+                    if linea.startswith('{') and linea.endswith('}'):
+                        dato_json = json.loads(linea)
+                        print(f"📥 [SERIAL] Recibido de ESP32: {dato_json}")
+                        self._save_in_json(dato_json)
+                        return dato_json
+                    elif linea:
+                        print(f"[ESP32 LOG]: {linea}")
+        except Exception as e:
+            print(f"⚠️ [SERIAL] Error leyendo puerto: {e}")
         return None
 
     def _save_in_json(self, nuevo_dato):
@@ -172,6 +181,50 @@ class MiniQhaliRobot:
         self.serial.send(json_comando)
         return "Iniciando toma de signos vitales. Los resultados aparecerán en la pantalla."
 
+    def _bucle_sensores_fondo(self):
+        """Corre en un hilo separado leyendo el hardware continuamente."""
+        print("🧵 [HILO SENSORES] Bucle iniciado de manera estable.")
+        contador_mediciones = 0
+        contador_idle = 0
+        
+        while True:
+            try:
+                if self.is_measuring:
+                    # Leemos el hardware
+                    dato_nuevo = self.read_sensors()
+                    
+                    # Imprimimos de forma controlada cada 5 iteraciones (~250-300ms)
+                    contador_mediciones += 1
+                    if contador_mediciones >= 5:
+                        current_time_ms = int(time.time() * 1000)
+                        print(f"⏱️ [{current_time_ms} ms] Hilo Activo. Medición -> Dato nuevo: {dato_nuevo}")
+                        contador_mediciones = 0
+
+                    if dato_nuevo:
+                        self.update_server()
+                    
+                    time.sleep(0.05) # Muestreo constante cada 50ms
+                else:
+                    # Modo Reposo: Imprimimos cada 10 iteraciones (~1 segundo)
+                    contador_idle += 1
+                    if contador_idle >= 10:
+                        current_time_ms = int(time.time() * 1000)
+                        print(f"💤 [{current_time_ms} ms] Hilo Activo. Reposo -> No estamos midiendo de momento...")
+                        contador_idle = 0
+                    
+                    time.sleep(0.1) # Respiro al CPU
+                    
+            except Exception as thread_err:
+                # Si ocurre cualquier error crítico en el hardware, lo reportamos sin matar el hilo
+                print(f"🚨 Error crítico en el hilo de sensores: {thread_err}")
+                time.sleep(0.5)
+
+    def speak_async(self, texto: str):
+        """Envía el texto al TextToSpeech en un hilo separado para evitar bloquear el hardware."""
+        import threading
+        if texto and texto.strip() != "":
+            threading.Thread(target=self.tts.speak, args=(texto,), daemon=True).start()
+    
     # --- Bucle de Ejecución ---
 
     def run(self):
@@ -182,12 +235,6 @@ class MiniQhaliRobot:
 
         try:
             while True:
-                # --- 1. TAREAS DE FONDO: LECTURA DE SENSORES ---
-                # Solo leemos y mandamos si el Socket nos activó la bandera
-                if self.is_measuring:
-                    dato_nuevo = self.read_sensors()
-                    if dato_nuevo:
-                        self.update_server()
 
                 # --- 2. INTERACCIÓN POR VOZ: PROCESAMIENTO LLM ---
                 user_input = self.stt.listen()
@@ -239,11 +286,10 @@ class MiniQhaliRobot:
                     if part.function_call:
                         fn = part.function_call
                         if fn.name == "execute_pose":
-                            # Ejecuta el movimiento físico inmediatamente
                             self.execute_pose(**fn.args)
                     elif part.text:
-                        # El texto se habla al final para que el robot ya esté en la pose correcta
-                        self.tts.speak(part.text)
+                        # CAMBIADO: Hablar de forma asíncrona al usuario
+                        self.speak_async(part.text)
 
         except KeyboardInterrupt:
             print("\n🛑 Deteniendo hardware y conexiones...")

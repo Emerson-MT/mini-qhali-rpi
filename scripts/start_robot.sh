@@ -1,5 +1,5 @@
 #!/bin/bash
-MAC_ADDR="F5:4E:FD:30:F8:61"
+MAC_ADDR="F5:4E:FD:5C:CF:12"
 VENV_PATH="$HOME/venvs/miniqhali_venv/bin/activate"
 PYTHON_MAIN="main.py"
 

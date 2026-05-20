@@ -27,10 +27,12 @@ class ServerComm:
 
         # 3. Registro dinámico de canales con la fábrica
         def crear_manejador(nombre_canal):
-            def handler(data):
+            def handler(data=None):  # <-- data ahora es opcional
                 print(f"📡 Evento [{nombre_canal}] recibido")
                 if nombre_canal in self.callbacks:
-                    self.callbacks[nombre_canal](data)
+                    # Si data es None, enviamos un diccionario vacío seguro
+                    payload_y_seguro = data if data is not None else {}
+                    self.callbacks[nombre_canal](payload_y_seguro)
             return handler
 
         for canal in canales:

@@ -9,6 +9,10 @@ BASE_DIR = Path(__file__).resolve().parent
 SRC_PATH = BASE_DIR / "src"
 sys.path.append(str(SRC_PATH))
 
+# 1. Silenciar ALSA antes que nada
+from miniqhali_lib.user_comm.silence_alsa import silence_alsa
+silence_alsa()
+
 from miniqhali_lib import MiniQhaliRobot
 
 # --- Configuración de Parámetros ---
