@@ -50,6 +50,10 @@ class MiniQhaliRobot:
 
         # Configuración de Text to Speech
         self.tts = TextToSpeech(volume_boost="1.0")
+
+        # --- AGREGAR ESTO EN EL __init__ ---
+        import threading
+        self.speech_lock = threading.Lock() # Candado para evitar superposición de voz
         
         # 3. Configuración del Cerebro (LLM) con sus Tools
         my_tools = [
@@ -259,10 +263,33 @@ class MiniQhaliRobot:
                 time.sleep(0.5)
 
     def speak_async(self, texto: str):
-        """Envía el texto al TextToSpeech en un hilo separado para evitar bloquear el hardware."""
+        """
+        Envía el texto al TTS en un hilo secundario de forma segura,
+        evitando que los mensajes se pisen entre sí usando un candado.
+        """
         import threading
+        
+        def _hilo_habla_protegido(texto_a_decir):
+            # El hilo intenta tomar el control del parlante. 
+            # Si está ocupado, espera aquí de forma ordenada.
+            with self.speech_lock:
+                try:
+                    # Imprimimos en consola para monitorear el hilo de audio
+                    print(f"🔊 MiniQhali Hablando: '{texto_a_decir}'")
+                    self.tts.speak(texto_a_decir)
+                except Exception as e:
+                    print(f"⚠️ Error en la reproducción de voz: {e}")
+
         if texto and texto.strip() != "":
-            threading.Thread(target=self.tts.speak, args=(texto,), daemon=True).start()
+            # Limpiamos saltos de línea molestos que envíe el LLM
+            texto_limpio = texto.replace("\n", " ").strip()
+            
+            # Lanzamos el hilo encargado de hacer la fila para hablar
+            threading.Thread(
+                target=_hilo_habla_protegido, 
+                args=(texto_limpio,), 
+                daemon=True
+            ).start()
     
     # --- Bucle de Ejecución ---
 
@@ -275,8 +302,22 @@ class MiniQhaliRobot:
         try:
             while True:
 
+                # --- 1. PROTECCIÓN ANTI-RETROALIMENTACIÓN ---
+                # Si el candado de voz está ocupado, esperamos a que termine de hablar
+                if self.speech_lock.locked():
+                    time.sleep(0.1)
+                    continue
+
                 # --- 2. INTERACCIÓN POR VOZ: PROCESAMIENTO LLM ---
+                # El robot solo escucha si el parlante está en total silencio
                 user_input = self.stt.listen()
+
+                # Doble verificación: si mientras escuchaba, el robot empezó a hablar 
+                # (por ejemplo, por un comando de socket de la pantalla), descartamos el input.
+                if self.speech_lock.locked():
+                    print("🔇 Input de voz descartado: El robot estaba hablando.")
+                    continue
+
                 if not user_input or user_input.strip() == "":
                     time.sleep(0.01) # Evitar consumo excesivo de CPU
                     continue
