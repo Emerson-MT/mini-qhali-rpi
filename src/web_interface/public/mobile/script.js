@@ -100,8 +100,16 @@ function nextStep(targetStep) {
         setProgressBar(25);
     }
 
-    // Si entramos a los pasos 2, 3 o 4 (BPM, SpO2 o Temp), encendemos sensores.
-    if (measuring_state[targetStep]) {
+    // --- CORRECCIÓN DE LOGICA DE SENSORES ---
+    // Si entramos al Paso 1 (Formulario) o Paso 5 (Resultados), aseguramos apagar sensores
+    if (targetStep === 1 || targetStep === 5 || targetStep === 0) {
+        socket.emit('activar_sensores', { 
+            activo: false, 
+            tipo: 'data' 
+        });
+    } 
+    // Si entramos a los pasos de medición física (2, 3 o 4), encendemos el hardware
+    else if (measuring_state[targetStep]) {
         socket.emit('activar_sensores', { 
             activo: true, 
             tipo: measuring_state[targetStep] 
@@ -197,7 +205,7 @@ function finalizarRecoleccion(type) {
 socket.on('sensorData', (data) => {
     const rawBPM = Math.round(data.heartRate || 0);
     const rawSpO2 = Math.round(data.spo2 || 0);
-    const rawTemp = parseFloat(data.tempObject || 0).toFixed(1);
+    const rawTemp = parseFloat(data.temp || 0).toFixed(1);
     const fingerDetected = data.finger_detected === true || data.finger_detected === "True";
 
     const elBpm = document.getElementById('val-bpm');

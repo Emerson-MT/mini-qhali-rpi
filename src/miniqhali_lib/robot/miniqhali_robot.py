@@ -20,11 +20,18 @@ class MiniQhaliRobot:
         # 2. Variables de estado del proceso
         self.is_measuring = None
         self.measuring_state = 'data' 
+        self.serial_buffer = ""
         
         # 3. Inicialización de Componentes Modulares
         
         # Configuración de conexión Serial
         self.serial = SerialConnection(port='/dev/ttyUSB0', baud_rate=115200)
+
+        # --- AGREGAR ESTO: Limpieza de tramas corruptas iniciales ---
+        if self.serial.connection and self.serial.connection.is_open:
+            self.serial.connection.reset_input_buffer()
+            self.serial.connection.reset_output_buffer()
+            print("🧹 Buffers seriales del puerto /dev/ttyUSB0 limpiados con éxito.")
         
         # Configuración de conexión con servidor
         self.server = ServerComm(base_url="http://localhost:3000")
@@ -104,20 +111,46 @@ class MiniQhaliRobot:
     # --- Métodos de Integración de Datos (Serial -> JSON -> Server) ---
 
     def read_sensors(self):
-        """Lee el puerto serial y guarda en el archivo JSON local."""
+        """Lee el puerto serial acumulando datos en un buffer para evitar tramas cortadas."""
         try:
             if self.serial.connection and self.serial.connection.is_open:
-                if self.serial.connection.in_waiting > 0:
-                    linea = self.serial.connection.readline().decode('utf-8', errors='ignore').strip()
-                    if linea.startswith('{') and linea.endswith('}'):
-                        dato_json = json.loads(linea)
-                        print(f"📥 [SERIAL] Recibido de ESP32: {dato_json}")
-                        self._save_in_json(dato_json)
-                        return dato_json
-                    elif linea:
-                        print(f"[ESP32 LOG]: {linea}")
+                # 1. Comprobamos si hay bytes esperando en el chip serial
+                bytes_to_read = self.serial.connection.in_waiting
+                if bytes_to_read > 0:
+                    # Leemos absolutamente todo lo que esté en el buffer en este instante
+                    fragmento = self.serial.connection.read(bytes_to_read).decode('utf-8', errors='ignore')
+                    self.serial_buffer += fragmento
+
+                    # 2. Procesamos el buffer acumulado buscando llaves completas
+                    if "{" in self.serial_buffer and "}" in self.serial_buffer:
+                        start_idx = self.serial_buffer.find("{")
+                        end_idx = self.serial_buffer.rfind("}") + 1
+                        
+                        # Extraemos el paquete potencialmente válido
+                        posible_json = self.serial_buffer[start_idx:end_idx].strip()
+                        
+                        # Limpiamos lo procesado del buffer global para liberar memoria
+                        self.serial_buffer = self.serial_buffer[end_idx:]
+
+                        try:
+                            # Intentamos parsear el string aislado
+                            dato_json = json.loads(posible_json)
+                            
+                            if "timestamp" not in dato_json:
+                                dato_json["timestamp"] = int(time.time() * 1000)
+                                
+                            print(f"📥 [SERIAL] JSON Válido Reconstruido: {dato_json}")
+                            self._save_in_json(dato_json)
+                            return dato_json
+                            
+                        except json.JSONDecodeError:
+                            # Si el aislamiento falló (ej. basura entre las llaves), mostramos el log
+                            if len(posible_json) > 3:
+                                print(f"📋 [ESP32 FRAGMENTO]: {posible_json}")
+                                
         except Exception as e:
-            print(f"⚠️ [SERIAL] Error leyendo puerto: {e}")
+            print(f"⚠️ [SERIAL] Error crítico en lectura acumulada: {e}")
+            self.serial_buffer = "" # Reseteamos ante fallos físicos
         return None
 
     def _save_in_json(self, nuevo_dato):
@@ -184,38 +217,44 @@ class MiniQhaliRobot:
     def _bucle_sensores_fondo(self):
         """Corre en un hilo separado leyendo el hardware continuamente."""
         print("🧵 [HILO SENSORES] Bucle iniciado de manera estable.")
-        contador_mediciones = 0
         contador_idle = 0
+        
+        # Variable para controlar el envío temporal en milisegundos
+        ultimo_envio_ms = 0
         
         while True:
             try:
                 if self.is_measuring:
-                    # Leemos el hardware
+                    current_time_ms = int(time.time() * 1000)
+                    
+                    # 1. CONTROL DE ENVÍO: Solo enviamos la orden si ha pasado 1 segundo (1000 ms)
+                    if current_time_ms - ultimo_envio_ms >= 1000:
+                        self.begin_measurements() 
+                        ultimo_envio_ms = current_time_ms  # Actualizamos la marca de tiempo
+                    
+                    # 2. LECTURA CONTINUA: Leemos el puerto en cada iteración del bucle (cada 50ms)
+                    # Esto garantiza que capturemos el JSON del ESP32 apenas termine de transmitirse
                     dato_nuevo = self.read_sensors()
                     
-                    # Imprimimos de forma controlada cada 5 iteraciones (~250-300ms)
-                    contador_mediciones += 1
-                    if contador_mediciones >= 5:
-                        current_time_ms = int(time.time() * 1000)
-                        print(f"⏱️ [{current_time_ms} ms] Hilo Activo. Medición -> Dato nuevo: {dato_nuevo}")
-                        contador_mediciones = 0
-
                     if dato_nuevo:
+                        print(f"⏱️ [{current_time_ms} ms] Hilo Activo. Medición -> Dato nuevo: {dato_nuevo}")
                         self.update_server()
-                    
-                    time.sleep(0.05) # Muestreo constante cada 50ms
+                                  
+                    time.sleep(0.05) # Frecuencia de muestreo del buffer serial (50ms)
+                
                 else:
-                    # Modo Reposo: Imprimimos cada 10 iteraciones (~1 segundo)
+                    # Modo Reposo: Reseteamos la marca para que mida de inmediato al activarse
+                    ultimo_envio_ms = 0 
+                    
                     contador_idle += 1
                     if contador_idle >= 10:
                         current_time_ms = int(time.time() * 1000)
                         print(f"💤 [{current_time_ms} ms] Hilo Activo. Reposo -> No estamos midiendo de momento...")
                         contador_idle = 0
                     
-                    time.sleep(0.1) # Respiro al CPU
+                    time.sleep(0.1) # Respiro al CPU en reposo
                     
             except Exception as thread_err:
-                # Si ocurre cualquier error crítico en el hardware, lo reportamos sin matar el hilo
                 print(f"🚨 Error crítico en el hilo de sensores: {thread_err}")
                 time.sleep(0.5)
 

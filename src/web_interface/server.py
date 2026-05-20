@@ -19,7 +19,7 @@ blinkFlag = 0
 faceFlag = 0
 # NUEVO: Guardamos el último dato de sensores recibido
 last_sensor_data = {
-    "tempObject": 0,
+    "temp": 0,
     "spo2": 0,
     "heartRate": 0
 }
@@ -107,7 +107,7 @@ def recibir_telemetria():
     last_sensor_data = ultimo_dato
     
     # Extraemos los valores usando las llaves de TU json
-    temp_obj = ultimo_dato.get("tempObject", 0.0) or 0.0
+    temp_obj = ultimo_dato.get("temp", 0.0) or 0.0
     spo2 = ultimo_dato.get("spo2", 0) or 0
     bpm = ultimo_dato.get("heartRate", 0) or 0
     finger = ultimo_dato.get("finger_detected", False) or False
