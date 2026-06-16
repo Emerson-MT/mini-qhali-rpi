@@ -1,5 +1,20 @@
 # MiniQhali - Robot Social de Asistencia Médica 🤖🏥
 
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="images/Miniqhali_1.jpeg" width="400px" alt="MiniQhali Front View"/>
+      <br>
+      <sup><b>MiniQhali Main Board / Front View</b></sup>
+    </td>
+    <td align="center">
+      <img src="images/Miniqhali_2.jpeg" width="400px" alt="MiniQhali Side View"/>
+      <br>
+      <sup><b>Custom PCB & Power Management</b></sup>
+    </td>
+  </tr>
+</table>
+
 Este proyecto integra un sistema de **sensores biomédicos (IoT)** con una **interfaz robótica web (Flask)** y un sistema de **gestión de pacientes (MySQL)**. El robot "MiniQhali" visualiza el estado de salud del paciente mediante expresiones faciales animadas y permite el registro, monitoreo y almacenamiento histórico de consultas médicas.
 
 ## 📂 Estructura del Proyecto
