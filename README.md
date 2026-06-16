@@ -5,12 +5,12 @@
     <td align="center">
       <img src="images/Miniqhali_1.jpeg" width="400px" alt="MiniQhali Front View"/>
       <br>
-      <sup><b>MiniQhali Main Board / Front View</b></sup>
+      <sup><b>MiniQhali Front View</b></sup>
     </td>
     <td align="center">
       <img src="images/Miniqhali_2.jpeg" width="400px" alt="MiniQhali Side View"/>
       <br>
-      <sup><b>Custom PCB & Power Management</b></sup>
+      <sup><b>MiniQhali Side View</b></sup>
     </td>
   </tr>
 </table>
